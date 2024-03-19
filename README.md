@@ -29,7 +29,7 @@ python /pathto/pipeline.py --pri <primary assembly> --alt <alternate assembly> -
 --hic1 | \<FILE> | Hi-C pair 1 file name |
 --hic2 | \<FILE> | Hi-C pair 2 file name |
 --model | \<FILE> | model path used to call SNP by Clair3 |
---type | \<STR> | sequencing technology [clr | hifi | ont] |
+--type | \<STR> | sequencing technology [ont] |
 --seed | \<INT> | seed for random function default 10000 |
 --iter | \<INT> | iteration for phasing algorithm default 1000 |
 -d | \<DIR> | directory to save the output files |
