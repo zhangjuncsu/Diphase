@@ -1,5 +1,6 @@
 #include "seq_io.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include <cassert>
 
@@ -58,8 +59,9 @@ bool FastqReader::Next(Unit& u) {
     assert(Valid());
     bool ret = GetHead(u.head, u.sub_head) && GetSeq(u.seq) && GetComment() && GetQuality(u.quality);
     if(u.seq.size() != u.quality.size()) {
-        std::cerr << "[" << GetCurTime() << "] The length of sequence and quatity of read " << u.head << " " << u.sub_head << " is not equal\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("The length of sequence and quatity of read %s %s is not equal\n", u.head.c_str(), u.sub_head.c_str());
+        // std::cerr << "[" << GetCurTime() << "] The length of sequence and quatity of read " << u.head << " " << u.sub_head << " is not equal\n";
+        // exit(EXIT_FAILURE);
     }
     return ret;
 }

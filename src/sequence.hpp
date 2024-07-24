@@ -47,12 +47,12 @@ public:
 
         std::swap(table_['a'], table_['t']);
         std::swap(table_['c'], table_['g']);
-        std::swap(table_['g'], table_['c']);
-        std::swap(table_['t'], table_['a']);
+        // std::swap(table_['g'], table_['c']);
+        // std::swap(table_['t'], table_['a']);
         std::swap(table_['A'], table_['T']);
         std::swap(table_['C'], table_['G']);
-        std::swap(table_['G'], table_['C']);
-        std::swap(table_['T'], table_['A']);
+        // std::swap(table_['G'], table_['C']);
+        // std::swap(table_['T'], table_['A']);
     }
 
     char operator[](char c) const { return table_[(uint8_t)c]; }

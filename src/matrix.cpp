@@ -1,5 +1,6 @@
 #include "matrix.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include <cassert>
 #include <cstring>
@@ -22,13 +23,15 @@ void Matrix::Load(const std::string &fname) {
     char magic[mlen];
     FILE *fr = fopen(fname.c_str(), "rb");
     if(fr == NULL) {
-        std::cerr << "[" << GetCurTime() << "] Could not open " << fname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for reading\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not open " << fname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     fread(magic, 1, mlen, fr);
     if(strncmp(magic, magic_, mlen) != 0) {
-        std::cerr << "[" << GetCurTime() << "] File is not correct\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("File is not correct\n");
+        // std::cerr << "[" << GetCurTime() << "] File is not correct\n";
+        // exit(EXIT_FAILURE);
     }
     fread(&row_, sizeof(uint32_t), 1, fr);
     fread(&col_, sizeof(uint32_t), 1, fr);
@@ -41,8 +44,9 @@ void Matrix::Load(const std::string &fname) {
     char magic_end[mlen];
     fread(&magic_end, 1, mlen, fr);
     if(strncmp(magic_end, magic_, mlen) != 0) {
-        std::cerr << "[" << GetCurTime() << "] File is not correct\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("File is not correct\n");
+        // std::cerr << "[" << GetCurTime() << "] File is not correct\n";
+        // exit(EXIT_FAILURE);
     }
     fclose(fr);
 }
@@ -54,7 +58,8 @@ int Matrix::AddLink(uint32_t row, uint32_t col) {
 }
 
 void Matrix::Print() const {
-    std::cerr << "[" << GetCurTime() << "] Matrix size: " << row_ << " X " << col_ << "\n";
+    LOG(INFO)("Matrix size: %u X %u\n", row_, col_);
+    // std::cerr << "[" << GetCurTime() << "] Matrix size: " << row_ << " X " << col_ << "\n";
     for(auto row: data_) {
         for(auto e: row) {
             std::cout << e << " ";
@@ -64,7 +69,8 @@ void Matrix::Print() const {
 }
 
 void Matrix::Print(uint32_t row, uint32_t col) const {
-    std::cerr << "[" << GetCurTime() << "] " << row << " X " << col << "\n";
+    LOG(INFO)("Matrix size: %u X %u\n", row, col);
+    // std::cerr << "[" << GetCurTime() << "] " << row << " X " << col << "\n";
     for(uint32_t r = 0; r < row; ++r) {
         for(uint32_t c = 0; c < col; ++c) {
             std::cout << data_[r][c] << " ";

@@ -1,5 +1,6 @@
 #include "bam_reader.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include <iostream>
 
@@ -14,20 +15,23 @@ void BamReader::Initialize(const std::string &fname) {
     fname_ = fname;
     hfile_ = hts_open(fname.c_str(), "r");
     const htsFormat *fmt = hts_get_format(hfile_);
-    std::cerr << "[" << GetCurTime() << "] Detect " << hts_format_file_extension(fmt) << " file type\n";
+    LOG(INFO)("Detect %s file type\n", hts_format_file_extension(fmt));
+    // std::cerr << "[" << GetCurTime() << "] Detect " << hts_format_file_extension(fmt) << " file type\n";
 
     // if((reader_ = sam_open_format(fname.c_str(), "r", fmt)) == 0) {
     //     std::cerr << "[" << GetCurTime() << "] Could not open " << fname << " for reading\n";
     //     exit(EXIT_FAILURE);
     // }
     if((header_ = sam_hdr_read(hfile_)) == 0) {
-        std::cerr << "[" << GetCurTime() << "] Failed to read the header from " << fname << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to read the header from %s\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to read the header from " << fname << "\n";
+        // exit(EXIT_FAILURE);
     }
     record_ = bam_init1();
     if(record_ == NULL) {
-        std::cerr << "[" << GetCurTime() << "] Failed to init bam1_t structure\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to init bam1_t structure\n");
+        // std::cerr << "[" << GetCurTime() << "] Failed to init bam1_t structure\n";
+        // exit(EXIT_FAILURE);
     }
 }
 
@@ -37,8 +41,9 @@ std::vector<bam1_t*> BamReader::LoadAll() {
         int ret = sam_read1(hfile_, header_, record_);
         if(ret == -1) break;
         else if(ret < -1) {
-            std::cerr << "[" << GetCurTime() << "] An error occur when reading " << fname_ << "\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("An error occur when reading %s\n", fname_.c_str());
+            // std::cerr << "[" << GetCurTime() << "] An error occur when reading " << fname_ << "\n";
+            // exit(EXIT_FAILURE);
         }
         rec.emplace_back(bam_dup1(record_));
     }
@@ -50,9 +55,10 @@ std::vector<bam1_t*> BamReader::Load(const std::string &ctg) {
     htsFile *hfile = hts_open(fname_.c_str(), "r");
     hts_idx_t *bam_idx = sam_index_load(hfile, fname_.c_str());
     if(bam_idx == NULL) {
-        std::cerr << "[" << GetCurTime() << "] Could not load .bai index file for " << fname_ << "\n";
-        std::cerr << "Please run \"samtools index " << fname_ << "\" brfore\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not load .bai index file for %s\nPlease run \"samtools index %s\" before\n", fname_.c_str(), fname_.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not load .bai index file for " << fname_ << "\n";
+        // std::cerr << "Please run \"samtools index " << fname_ << "\" brfore\n";
+        // exit(EXIT_FAILURE);
     }
     int contig_id = bam_name2id(header_, ctg.c_str());
     bam1_t *record = bam_init1();
@@ -73,13 +79,15 @@ int BamReader::LoadPair(std::array<bam1_t*, 2> &pair) {
     int ret1 = sam_read1(hfile_, header_, pair[0]);
     if(ret1 == -1) return -1;
     else if(ret1 < -1) {
-        std::cerr << "[" << GetCurTime() << "] An error occur when reading " << fname_ << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("An error occur when reading %s\n", fname_.c_str());
+        // std::cerr << "[" << GetCurTime() << "] An error occur when reading " << fname_ << "\n";
+        // exit(EXIT_FAILURE);
     }
     int ret2 = sam_read1(hfile_, header_, pair[1]);
     if(ret2 < -1) {
-        std::cerr << "[" << GetCurTime() << "] An error occur when reading " << fname_ << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("An error occur when reading %s\n", fname_.c_str());
+        // std::cerr << "[" << GetCurTime() << "] An error occur when reading " << fname_ << "\n";
+        // exit(EXIT_FAILURE);
     }
     if(ret1 > -1 && ret2 > -1) return 0;
     else return -1;

@@ -1,5 +1,6 @@
 #include "read_store.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 SeqReader *ReadStore::OpenFile(const std::string &fname) {
     SeqReader *reader;
@@ -11,12 +12,14 @@ SeqReader *ReadStore::OpenFile(const std::string &fname) {
     } else if(type == "fastq" || type == "fq") {
         reader = new FastqReader(fname);
     } else {
-        std::cerr << "[" << GetCurTime() << "] Unrecognized file type " << type << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Unrecognized file type %s\n", type.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Unrecognized file type " << type << "\n";
+        // exit(EXIT_FAILURE);
     }
-    if(reader->Valid()) {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << fname << " for reading\n";
-        exit(EXIT_FAILURE);
+    if(!reader->Valid()) {
+        LOG(ERROR)("Failed to open %s for reading\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << fname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     return reader;
 }
@@ -36,8 +39,9 @@ void ReadStore::Load(const std::string &fname, const std::string &type, int min_
     } else if(t == "fastq" || t == "fq") {
         LoadFastq(fname, min_length);
     } else {
-        std::cerr << "[" << GetCurTime() << "] Unrecognized file type " << fname << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Unrecognized file type %s\n", t.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Unrecognized file type " << fname << "\n";
+        // exit(EXIT_FAILURE);
     }
 }
 
@@ -58,13 +62,16 @@ void ReadStore::LoadFasta(const std::string &fname, int min_length) {
             items_.emplace_back(u.seq, id);
         }
         if(!reader.IsEnd()) {
-            std::cerr << "[" << GetCurTime() << "] Not all reads in file " << fname << " are loaded\n";
+            LOG(WARNING)("Not all reads in file %s are loaded\n", fname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Not all reads in file " << fname << " are loaded\n";
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open file " << fname << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open file " << fname << "\n";
+        // exit(EXIT_FAILURE);
     }
-    std::cerr << "[" << GetCurTime() << "] Load " << names_.size() << " reads from file " << fname << "\n";
+    LOG(INFO)("Load %lu reads from file %s\n", names_.size(), fname.c_str());
+    // std::cerr << "[" << GetCurTime() << "] Load " << names_.size() << " reads from file " << fname << "\n";
 }
 
 void ReadStore::LoadFastq(const std::string &fname, int min_length) {
@@ -84,19 +91,23 @@ void ReadStore::LoadFastq(const std::string &fname, int min_length) {
             items_.emplace_back(u.head, id);
         }
         if(!reader.IsEnd()) {
-            std::cerr << "[" << GetCurTime() << "] Not all reads in file " << fname << " are loaded\n";
+            LOG(WARNING)("Not all reads in file %s are loaded\n", fname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Not all reads in file " << fname << " are loaded\n";
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open file " << fname << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open file " << fname << "\n";
+        // exit(EXIT_FAILURE);
     }
-    std::cerr << "[" << GetCurTime() << "] Load " << names_.size() << " reads in file " << fname << "\n";
+    LOG(INFO)("Load %lu reads from file %s\n", names_.size(), fname.c_str());
+    // std::cerr << "[" << GetCurTime() << "] Load " << names_.size() << " reads in file " << fname << "\n";
 }
 
 SeqReader::ID ReadStore::GetIdByName(const std::string &name) const {
     auto iter = name2id_.find(name);
     if(iter == name2id_.end()) {
-        std::cerr << "[" << GetCurTime() << "] Name " << name << " not found\n";
+        LOG(WARNING)("Name %s not found\n", name.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Name " << name << " not found\n";
         return -1;
     } else {
         return iter->second;

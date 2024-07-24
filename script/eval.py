@@ -265,6 +265,41 @@ def phase_eval1(rfname, cfname):
                 phase[1] += paternal
         print('correct phased {} incorrect phased {} phase error {:>.6f}%'.format(phase[0], phase[1], phase[1] * 100/(phase[0] + phase[1])), file = sys.stderr)
 
+def phase_shasta_eval(cfname, pfname):
+    contig = {}
+    for line in open(cfname):
+        if not line.startswith('Assembly-Phased'): continue
+        items = line.strip().split()
+        contig[items[1]] = [int(items[2]), int(items[3])]
+    hap1, hap2 = {}, {}
+    for line in open(pfname):
+        if not line.startswith('PR'): continue
+        items = line.strip().split(',')
+        c = '.'.join(items[0].split('.')[:2])
+        if items[1] == '1':
+            hap1.setdefault(c, []).append(items[0])
+        elif items[1] == '-1':
+            hap2.setdefault(c, []).append(items[0])
+    
+    for hap in [hap1, hap2]:
+        phase = [0, 0]
+        for ctg, blocks in hap.items():
+            paternal, maternal = 0, 0
+            for b in blocks:
+                if b not in contig:
+                    continue
+                if contig[b][0] > contig[b][1]:
+                    paternal += 1
+                elif contig[b][0] < contig[b][1]:
+                    maternal += 1
+            if paternal > maternal:
+                phase[0] += paternal
+                phase[1] += maternal
+            elif paternal < maternal:
+                phase[0] += maternal
+                phase[1] += paternal
+        print('correct phased {} incorrect phased {} phase error {:>.6f}%'.format(phase[0], phase[1], phase[1] * 100/(phase[0] + phase[1] + 1)), file = sys.stderr)
+
 def _load_matrix(mfname):
     header, matrix = [], []
     for line in open(mfname):
@@ -293,7 +328,7 @@ def total_contacts(mfname):
     print('total contacts {} total diagonal {}'.format(total, t_diag), file = sys.stderr)
 
 import pysam
-def hic_contact_eval(cfname, h1fname, afname):
+def hic_contact_eval(cfname, h1fname, afname, mapq, filter):
     pair = {}
     for line in open(afname):
         items = line.strip().split()
@@ -312,30 +347,50 @@ def hic_contact_eval(cfname, h1fname, afname):
     total = 0
     prev = ''
     ctg1, ctg2 = '', ''
+    mapq1, mapq2 = 0, 0
     mapping = []
+    nm1, nm2 = 0, 0
     bf = pysam.AlignmentFile(h1fname, 'rb')
     for line in bf:
+        if filter and line.mapping_quality < mapq: continue
         if line.query_name != prev:
             prev = line.query_name
             ctg1 = line.reference_name
+            mapq1 = line.mapping_quality
+            nm1 = line.get_tag('NM')
         else:
             total += 1
             ctg2 = line.reference_name
+            mapq2 = line.mapping_quality
+            nm2 = line.get_tag('NM')
             if ctg1[0: 7] == ctg2[0: 7] and ctg1 in pair and ctg2 in pair and ctg1 != ctg2 and ctg2 != pair[ctg1]:
-                mapping.append((ctg1, ctg2))
+                nm = 0
+                if nm1 >= 5 or nm2 >= 5:
+                    nm = 1
+                mapping.append((ctg1, ctg2, mapq1, mapq2, nm))
     
     res = [0, 0]
     count = 0
-    for ctg1, ctg2 in mapping:
+    snp = [0, 0]
+    zero = 0
+    for ctg1, ctg2, mapq1, mapq2, nm in mapping:
         if ctg1 not in haplotigs or ctg2 not in haplotigs:
             res[0] += 1
             count += 1
             continue
         if haplotigs[ctg1] * haplotigs[ctg2] >= 0:
             res[0] += 1
+            if haplotigs[ctg1] + haplotigs[ctg2] == 0:
+                zero += 1
+            if mapq1 < mapq or mapq2 < mapq or nm:
+                snp[0] += 1
         else:
             res[1] += 1
-    print('total {} correct {} incorrect {} count {}'.format(total, res[0], res[1], count), file = sys.stderr)
+            if mapq1 < mapq or mapq2 < mapq or nm:
+                snp[1] += 1
+    print('total {} correct {} incorrect {} count {} snp correct {} snp incorrect {}'.format(total, res[0], res[1], count, snp[0], snp[1]), file = sys.stderr)
+    print('zero {}'.format(zero), file = sys.stderr)
+    print('{}\t{}\t{}\t{}\t{}'.format(mapq, res[0], res[1], snp[0], snp[1]), file = sys.stdout)
 
 def process_one_contig(name, ctg, length, block):
     contig = [0] * (length + 1)
@@ -1030,6 +1085,87 @@ def homologous_block(fname, prefix):
         print('{} {}'.format(i * 1000, count[i]), file = sys.stderr)
     print('max {} min {} median {}'.format(match_c[0], match_c[-1], match_c[len(match_c) // 2]), file = sys.stderr)
 
+def eval_hic_link(cfname, lfname, pfname, thres):
+    block = {}
+    for line in open(cfname):
+        if line.startswith('Assembly'): continue
+        items = line.strip().split()
+        if int(items[2]) > int(items[3]):
+            block[items[1]] = 1
+        elif int(items[2]) < int(items[3]):
+            block[items[1]] = -1
+        else:
+            block[items[1]] = 0
+
+    i = 0
+    head = []
+    pair = {}
+    for line in open(pfname):
+        items = line.strip().split()
+        pair[items[0]] = items[1]
+        pair[items[1]] = items[0]
+        if i < 100:
+            head.append(items[0])
+            head.append(items[1])
+            i += 2
+        # if items[1].startswith('h1tg000026l'):
+        #     if items[0] not in block or block[items[0]] != -1:
+        #         head.append(items[0])
+        #         head.append(items[1])
+        #     else:
+        #         head.append(items[1])
+        #         head.append(items[0])
+
+    matrix = [] * len(head)
+    for i in range(len(head)):
+        matrix.append([0] * len(head))
+    count = [0, 0, 0]
+    index = 0
+    fw = open(lfname + '.stat', 'w')
+    for line in open(lfname):
+        items = line.strip().split()
+        try:
+            if int(items[4]) < thres or int(items[8]) < thres: continue
+        except IndexError:
+            print(line.strip())
+        if items[1] == items[5]: continue
+        if items[1] not in pair or items[5] not in pair: continue
+        if items[1] == pair[items[5]]: continue
+        if items[1] not in block or items[5] not in block: 
+            count[0] += 1
+            count[2] += 1
+            continue
+        if block[items[1]] * block[items[5]] >= 0:
+            count[0] += 1
+            fw.write('{}\t1\n'.format(line.strip()))
+            # print(line.strip())
+        else:
+            count[1] += 1
+            fw.write('{}\t0\n'.format(line.strip()))
+            # print(items[0])
+            # if index < 100:
+                # print('{} {} {} {}'.format(items[1], items[5], block[items[1]], block[items[5]]), file = sys.stderr)
+                # print('{} {}'.format(index, line.strip()), file = sys.stderr)
+                # print(items[0])
+                # index += 1
+        count[2] += 1
+
+        if items[1] in head and items[5] in head:
+            matrix[head.index(items[1])][head.index(items[5])] += 1
+            matrix[head.index(items[5])][head.index(items[1])] += 1
+    fw.close()
+    print('correct {} incorrect {} total {} rate {}'.format(count[0], count[1], count[2], count[0] / count[2]), file = sys.stderr)
+    # for h in head:
+    #     print(h, end = ' ', file = sys.stderr)
+    # print(file = sys.stderr)
+    # for mtx in matrix:
+    #     for m in mtx:
+    #         print(m, end = ' ', file = sys.stderr)
+    #     print(file = sys.stderr)
+
+def hic_link(args):
+    eval_hic_link(args.cfname, args.lfname, args.pfname, args.thres)
+
 def homologous(args):
     homologous_block(args.fname, args.prefix)
 
@@ -1040,7 +1176,7 @@ def dual(args):
     dual_to_block(args.gfname, args.pfname, args.jfname, args.prefix)
 
 def hic_contact(args):
-    hic_contact_eval(args.cfname, args.hfname, args.afname)
+    hic_contact_eval(args.cfname, args.hfname, args.afname, args.mapq, args.filter)
 
 def contact(args):
     total_contacts(args.mfname)
@@ -1059,6 +1195,9 @@ def switch_error(args):
 
 def phase_error(args):
     phase_eval1(args.rfname, args.cfname)
+
+def phase_shasta_error(args):
+    phase_shasta_eval(args.cfname, args.pfname)
 
 def main():
     parser = argparse.ArgumentParser('eval')
@@ -1089,6 +1228,11 @@ def main():
     parser_pe.add_argument('-c', '--cfname', dest = 'cfname', default = None, metavar = 'path', help = 'hap-mer counts file name')
     parser_pe.set_defaults(func = phase_error)
 
+    parser_gfase = subparser.add_parser('phase_gfase', help = 'calculate phase error rate in GFAse')
+    parser_gfase.add_argument('-c', '--cfname', dest = 'cfname', default = None, metavar = 'path', help = 'hap-mer counts file name')
+    parser_gfase.add_argument('-p', '--pfname', dest = 'pfname', default = None, metavar = 'path', help = 'phasing result file name')
+    parser_gfase.set_defaults(func = phase_shasta_error)
+
     parser_contact = subparser.add_parser('contact', help = 'calculate total contacts')
     parser_contact.add_argument('-m', '--mfname', dest = 'mfname', default = None, metavar = 'path', help = 'matrix file name')
     parser_contact.set_defaults(func = contact)
@@ -1097,6 +1241,8 @@ def main():
     parser_hic.add_argument('-c', '--cfname', dest = 'cfname', default = None, metavar = 'path', help = 'count file name')
     parser_hic.add_argument('-i', '--hfname', dest = 'hfname', default = None, metavar = 'path', help = 'hic file name=')
     parser_hic.add_argument('-a', '--afname', dest = 'afname', default = None, metavar = 'path', help = 'pair file name')
+    parser_hic.add_argument('-q', '--mapq', dest = 'mapq', type = int, default = 1, metavar = 'int', help = 'mapq threshold')
+    parser_hic.add_argument('-f', '--filter', dest = 'filter', action = 'store_true', help = 'filter map quality')
     parser_hic.set_defaults(func = hic_contact)
 
     parser_identity = subparser.add_parser('identity', help = 'calculate identity curve')
@@ -1118,6 +1264,13 @@ def main():
     parser_homologyzous.add_argument('-f', '--fname', dest = 'fname', default = None, metavar = 'path', help = 'sam file name')
     parser_homologyzous.add_argument('-p', '--prefix', dest = 'prefix', default = 'homologyzous', metavar = 'str', help = 'output file name')
     parser_homologyzous.set_defaults(func = homologous)
+
+    parser_hic_link = subparser.add_parser('hic_link', help = 'calculate hic link')
+    parser_hic_link.add_argument('-c', '--cfname', dest = 'cfname', default = None, metavar = 'path', help = 'count file name')
+    parser_hic_link.add_argument('-l', '--lfname', dest = 'lfname', default = None, metavar = 'path', help = 'link file name')
+    parser_hic_link.add_argument('-p', '--pfname', dest = 'pfname', default = None, metavar = 'path', help = 'paf file name')
+    parser_hic_link.add_argument('-s', '--thres', dest = 'thres', type = int, default = 100, metavar = 'int', help = 'threshold of contact')
+    parser_hic_link.set_defaults(func = hic_link)
 
     args = parser.parse_args()
     args.func(args)

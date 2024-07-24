@@ -20,6 +20,7 @@ struct Options {
     std::string b2fname; // {prefix}.phased1.bed
     std::string pcfname; // primary clair3
     std::string acfname; // alt clair3
+    std::string lfname; // hic link
     std::string prefix { "phasing" };
 
     int mapq { 10 };
@@ -35,6 +36,7 @@ struct Options {
     bool print_score { false };
     bool scaffold { false };
     bool porec { false };
+    bool more { false };
 
     int Check();
 };
@@ -64,8 +66,12 @@ public:
 
     int FilterHiCPair(std::array<bam1_t*, 2> &pair);
     int FilterHiCPairWithSNP(std::array<bam1_t*, 2> &pair);
+    std::array<std::size_t, 2> FilterHiCReads(std::vector<bam1_t*> &vec);
+    std::array<std::size_t, 2> FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec);
     void GenerateMatrix();
     void FilterAndGenerateMatrix();
+    void FilterAndGenerateMatrixMore();
+    void GenerateMatrixWithLink();
 
     std::vector<std::size_t> FilterPoreC(std::vector<bam1_t*> &vec);
     std::vector<std::size_t> FilterPoreCWithSNP(std::vector<bam1_t*> &vec);
@@ -108,6 +114,7 @@ private:
     BamReader reader_;
     std::vector<Ctg> contigs_;
     std::vector<std::string> names_;
+    std::vector<std::size_t> length_;
     std::unordered_map<std::string, std::size_t> name2id_;
     std::unordered_map<std::string, std::vector<long>> vars_;
     std::unordered_map<std::string, std::vector<std::size_t>> cov_;

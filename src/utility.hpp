@@ -6,6 +6,9 @@
 #include <thread>
 #include <algorithm>
 
+#include <sys/time.h>
+#include <sys/resource.h>
+
 template<typename F>
 void MultiThreads(int threads, F func) {
     std::vector<std::thread> worker;
@@ -33,4 +36,40 @@ inline std::string GetCurTime() {
     char tmp[64];
     strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S", localtime(&now));
     return std::string(tmp);
+}
+
+static double real_time_start;
+
+double GetCPUTime() {
+    struct rusage rusage;
+    getrusage(RUSAGE_SELF, &rusage);
+    return rusage.ru_utime.tv_sec + rusage.ru_stime.tv_sec + 1e-6 * (rusage.ru_utime.tv_usec + rusage.ru_stime.tv_usec);
+}
+
+static inline double RealTime() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec + 1e-6 * tv.tv_usec;
+}
+
+void ResetRealTime() {
+    real_time_start = RealTime();
+}
+
+double GetRealTime() {
+    return RealTime() - real_time_start;
+}
+
+long GetPeakMemory() {
+    struct rusage rusage;
+    getrusage(RUSAGE_SELF, &rusage);
+    return rusage.ru_maxrss;
+}
+
+double PeakMemoryGB() {
+    return GetPeakMemory() / 1048576.0;
+}
+
+double GetCpuUsage() {
+    return (GetCPUTime() + 1e-9) / (GetRealTime() + 1e-9);
 }

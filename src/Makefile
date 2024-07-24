@@ -8,7 +8,8 @@ INCLUDE=-I../thirdparty/htslib-1.16 -I../thirdparty -Isrc
 
 OBJ = matrix.o sequence.o file_io.o seq_io.o read_store.o logger.o
 
-all: bin SNPCall remap phase filter phasing merge cov bam2bed graph
+# all: bin SNPCall remap phase filter phasing merge cov bam2bed group # graph hic
+all: bin phasing
 
 bin:
 	mkdir -p ../bin
@@ -51,9 +52,17 @@ bam2bed: bam2bed.cpp bam_reader.cpp ../thirdparty/htslib-1.16/libhts.a $(OBJ)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@ $(LIBS) -lcurl -lbz2 -llzma
 	cp bam2bed ../bin
 
+group: regroup.cpp bam_reader.cpp ../thirdparty/htslib-1.16/libhts.a $(OBJ)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@ $(LIBS) -lcurl -lbz2 -llzma
+	cp group ../bin
+
 graph: graph.cpp bam_reader.cpp ../thirdparty/htslib-1.16/libhts.a $(OBJ)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@ $(LIBS) -lcurl -lbz2 -llzma
 	cp graph ../bin
+
+hic: hic.cpp $(OBJ)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
+	cp hic ../bin
 
 .cpp.o: ../thirdparty/htslib-1.16/libhts.a
 	$(CXX) -c $(CXXFLAGS) $(INCLUDE) $< -o $@

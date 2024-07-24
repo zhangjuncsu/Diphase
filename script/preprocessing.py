@@ -89,16 +89,22 @@ def pecat_to_unzip(pafname, aafname, ppfname, apfname, prefix):
     alt_clean_fname = prefix + '.alt.clean.fasta'
 
     # convert the name of polish sequences to the format of assembly
-    pri_rename_fname = prefix + '.primary.rename.fasta'
-    fsa_rename(pafname, ppfname, pri_rename_fname)
-    alt_rename_fname = prefix + '.alt.rename.fasta'
-    fsa_rename(aafname, apfname, alt_rename_fname)
+    if pafname == None or aafname == None:
+        pri_unzip_fname = prefix + '.primary.unzip.fasta'
+        fsa_unzip1(ppfname, pri_unzip_fname)
+        alt_unzip_fname = prefix + '.alt.unzip.fasta'
+        fsa_unzip1(apfname, alt_unzip_fname)
+    else:
+        pri_rename_fname = prefix + '.primary.rename.fasta'
+        fsa_rename(pafname, ppfname, pri_rename_fname)
+        alt_rename_fname = prefix + '.alt.rename.fasta'
+        fsa_rename(aafname, apfname, alt_rename_fname)
 
-    # convert the name of PECAT to unzip
-    pri_unzip_fname = prefix + '.primary.unzip.fasta'
-    fsa_unzip(pri_rename_fname, pri_unzip_fname)
-    alt_unzip_fname = prefix + '.alt.unzip.fasta'
-    fsa_unzip(alt_rename_fname, alt_unzip_fname)
+        # convert the name of PECAT to unzip
+        pri_unzip_fname = prefix + '.primary.unzip.fasta'
+        fsa_unzip(pri_rename_fname, pri_unzip_fname)
+        alt_unzip_fname = prefix + '.alt.unzip.fasta'
+        fsa_unzip(alt_rename_fname, alt_unzip_fname)
 
     cmd_pri = 'awk \'{ if(NR%2==1) tmp=$1; if(NR%2==0 && !match(tmp,"_")) print tmp"\\n"$0 }\' '
     logger.info('Command for primary: {}'.format(cmd_pri))
@@ -195,6 +201,39 @@ def make_name_mapping(primary, alt):
                 fw.write('{}\t{}\n'.format(p, a))
     logger.info('Omit {} a tigs without corresponding p tigs'.format(len(omitted)))
     return omitted
+
+def fsa_unzip1(fname, prefix):
+    re_main = re.compile("ctg([0-9]+)")
+    re_sub = re.compile("ctg([0-9]+)-([0-9]+)-([0-9]+)$")
+    index = defaultdict(int)
+    namemap = {}
+    ftype = _fa_or_fq(fname)
+    if ftype == None:
+        logger.error('Unrecognized file type {}'.format(fname))
+        exit(1)
+    for head, seq in eval('_load_' + ftype)(fname):
+        if '_' in head: continue
+        r = re_main.match(head.split()[0])
+        assert r != None
+        main, homo = r.group(1), ''
+        r = re_sub.match(head.split()[0])
+        if r:
+            homo = main
+        # else:
+        #     print(head)
+        #     homo = head.split()[1].split(':')[0][3:]
+        if homo != '':
+            name = '{:>06d}F_{:>03d}'.format(int(homo), index[homo] + 1)
+            index[homo] += 1
+        else:
+            name = '{:>06d}F'.format(int(main))
+        namemap[head] = name
+    
+    with open(prefix, 'w') as fw:
+        for head, seq in eval('_load_' + ftype)(fname):
+            if head not in namemap: continue
+            fw.write('>' + namemap[head] + '\n')
+            fw.write(seq + '\n')
 
 def fsa_unzip(fname, prefix):
     re_main = re.compile("ctg([0-9]+)")
@@ -395,6 +434,7 @@ def filter_alt(fname, output):
     res.sort(key = lambda x: (x[0], int(x[2])))
     with open(output, 'w') as fw:
         for item in res:
+            item[2], item[3] = '0', item[1]
             fw.write('\t'.join(i for i in item) + '\n')
 
 def gap(lf, ll):
@@ -1448,9 +1488,9 @@ def shasta2unzip_and_mapping(ifname, prefix, ofname, min_length, threads, dir):
             pi += 1
     with open(prefix + '.alt.fasta', 'w') as f:
         for bc, items in alt.items():
-            if len(items) == 1: 
-                pair.pop(items[0])
-                continue
+            # if len(items) == 1: 
+            #     pair.pop(items[0])
+            #     continue
             ai = 1
             for item in items:
                 name = '{}_{:0>3d}'.format(mapping[bc], ai)
@@ -1489,7 +1529,7 @@ def shasta2unzip_and_mapping(ifname, prefix, ofname, min_length, threads, dir):
             interval = alt_cut[head]
             interval.sort(key = lambda x: x[0])
             for st, en in interval:
-                if st >= en or st < 0 or en < 0:
+                if st > en or st < 0 or en < 0:
                     logger.error('Invalid interval of {}:{}-{}'.format(head, st, en))
                     exit(1)
                 f.write('>{}:{}-{}\n'.format(head, st, en))
@@ -1506,7 +1546,7 @@ def shasta2unzip_and_mapping(ifname, prefix, ofname, min_length, threads, dir):
             interval = pri_cut[head]
             interval.sort(key = lambda x: x[0])
             for st, en in interval:
-                if st >= en or st < 0 or en < 0:
+                if st > en or st < 0 or en < 0:
                     logger.error('Invalid interval of {}:{}-{}'.format(head, st, en))
                     exit(1)
                 fh.write('>{}:{}-{}\n'.format(head, st, en))
@@ -1627,7 +1667,7 @@ def shasta2unzip(ifname, prefix, min_length):
             pi += 1
     with open(prefix + '.alt.fasta', 'w') as f:
         for bc, items in alt.items():
-            if len(items) == 1: continue
+            # if len(items) == 1: continue
             ai = 1
             for item in items:
                 name = '{}_{:0>3d}'.format(mapping[bc], ai)
@@ -1638,6 +1678,106 @@ def shasta2unzip(ifname, prefix, min_length):
     with open(prefix + '.name_mapping', 'w') as f:
         for head, name in name_mapping.items():
             f.write('{}\t{}\n'.format(head, name))
+
+def fix_switch2(sfname, afname, pfname, ofname):
+    # sfname = args.sfname
+    # afname = args.afname
+    # pfname = args.pfname
+    # ofname = args.ofname
+
+    switch = {}
+    name_mapping = {}
+    if sfname != None:
+        for line in open(sfname, 'r'):
+            items = line.strip().split()
+            if items[2] != 'S' and items[2] != 'F' and items[2] != 'C': continue
+            switch[items[0]] = [int(items[1]), items[2]]
+            name_mapping[items[0].split(':')[0]] = items[0]
+    pair = {}
+    for line in open(afname, 'r'):
+        items = line.strip().split()
+        if items[1] not in switch: continue
+        pair[items[1]] = items[0]
+    pattern = re.compile(r'(\d+)([MIDNSHP=X])')
+    fixed = {}
+    for line in open(pfname, 'r'):
+        items = line.strip().split()
+        if len(items) < 11: continue
+        if items[0] not in name_mapping: continue
+        alt = int(items[2])
+        pri = int(items[7])
+        if items[4] == '-':
+            pri = int(items[6]) - int(items[8])
+        cigar = ''
+        for i in range(11, len(items)):
+            if items[i].startswith('cg:Z:'):
+                cigar = items[i][5:]
+                break
+        offset = int(pair[name_mapping[items[0]]].split(':')[1].split('-')[0])
+        for mat in pattern.finditer(cigar):
+            l, op = int(mat.group(1)), mat.group(2)
+            if op == 'M' or op == 'X' or op == '=':
+                if alt < switch[name_mapping[items[0]]][0] and alt + l > switch[name_mapping[items[0]]][0]:
+                    fixed[name_mapping[items[0]]] = switch[name_mapping[items[0]]][0]
+                    fixed[pair[name_mapping[items[0]]]] = pri + switch[name_mapping[items[0]]][0] - alt - offset
+                    break
+                alt += l
+                pri += l
+            elif op == 'D' or op == 'N':
+                if alt < switch[name_mapping[items[0]]][0] and alt + l > switch[name_mapping[items[0]]][0]:
+                    fixed[name_mapping[items[0]]] = alt + l
+                    fixed[pair[name_mapping[items[0]]]] = pri - offset
+                    break
+                alt += l
+            elif op == 'I' or op == 'S':
+                pri += l
+    with open(ofname, 'w') as fw:
+        for h, p in fixed.items():
+            fw.write('{}\t{}\t{}\n'.format(h, p, switch[h][1]))
+
+def fix_switch(args):
+    fix_switch2(args.sfname, args.afname, args.pfname, args.ofname)
+
+def group2(h1fname, h2fname, gfname, o1fname, o2fname):
+    # h1fname = args.h1fname
+    # h2fname = args.h2fname
+    # gfname = args.gfname
+    # o1fname = args.o1fname
+    # o2fname = args.o2fname
+
+    hap1, hap2 = {}, {}
+    ftype = _fa_or_fq(h1fname)
+    if ftype == None:
+        logger.error('Unrecognized file type {}'.format(h1fname))
+        exit(1)
+    for head, seq in eval('_load_' + ftype)(h1fname):
+        hap1[head] = seq
+    ftype = _fa_or_fq(h2fname)
+    if ftype == None:
+        logger.error('Unrecognized file type {}'.format(h2fname))
+        exit(1)
+    for head, seq in eval('_load_' + ftype)(h2fname):
+        hap2[head] = seq
+    group1, group2 = [], []
+    for line in open(gfname, 'r'):
+        items = line.strip().split()
+        group1.append(items[0])
+        group2.append(items[1])
+    with open(o1fname, 'w') as fw:
+        for g in group1:
+            if g in hap1:
+                fw.write('>{}\n{}\n'.format(g, hap1[g]))
+            elif g in hap2:
+                fw.write('>{}\n{}\n'.format(g, hap2[g]))
+    with open(o2fname, 'w') as fw:
+        for g in group2:
+            if g in hap1:
+                fw.write('>{}\n{}\n'.format(g, hap1[g]))
+            elif g in hap2:
+                fw.write('>{}\n{}\n'.format(g, hap2[g]))
+
+def group(args):
+    group2(args.h1fname, args.h2fname, args.gfname, args.o1fname, args.o2fname)
 
 def hapdup2unzip(ifname, prefix):
     ctg = {}
@@ -2532,6 +2672,86 @@ def chain_dual_advance(pafname, pfname, h1fname, h2fname, prefix):
             for st, en in interval:
                 fw.write('{}\t{}\t{}\n'.format(head, st, en))
 
+
+def simulate_switch_error(args):
+    pfname = args.pfname
+    prifname = args.prifname
+    altfname = args.altfname
+    prefix = args.prefix
+
+    pri_fasta, alt_fasta = {}, {}
+    ftype = _fa_or_fq(prifname)
+    if ftype == None:
+        logger.error('Unrecognized file type {}'.format(prifname))
+        exit(1)
+    for head, seq in eval('_load_' + ftype)(prifname):
+        pri_fasta[head] = seq
+    ftype = _fa_or_fq(altfname)
+    if ftype == None:
+        logger.error('Unrecognized file type {}'.format(altfname))
+        exit(1)
+    for head, seq in eval('_load_' + ftype)(altfname):
+        alt_fasta[head] = seq
+
+    pafs = {}
+    filtered = set()
+    for line in open(pfname, 'r'):
+        items = line.strip().split()
+        if items[0] == '000007F_007' or items[0] == '000013F_12' or items[0] == '000023F_009':
+            continue
+        if items[0] in pafs:
+            filtered.add(items[0])
+        pafs[items[0]] = line.strip()
+    switch = defaultdict()
+    pattern = re.compile(r'(\d+)([MIDNSHP=X])')
+    for h, paf in pafs.items():
+        if len(switch) == 200:
+            break
+        if h in filtered:
+            continue
+        items = paf.split()
+        if int(items[3]) - int(items[2]) < 5000000:
+            continue
+        alt, pri = int(items[2]), 0
+        alt_seq = alt_fasta[items[0]][int(items[2]): int(items[3])]
+        pri_seq = pri_fasta[items[5]][int(items[7]): int(items[8])]
+        if items[4] == '-':
+            pri_seq = _reverse(pri_seq)
+        cigar = ''
+        for i in range(12, len(items)):
+            if items[i].startswith('cg:Z:'):
+                cigar = items[i][5:]
+                break
+        for m in pattern.finditer(cigar):
+            l, op = int(m.group(1)), m.group(2)
+            if op == '=' or op == 'M' or op == 'X':
+                alt += l
+                pri += l
+            elif op == 'I':
+                alt += l
+            elif op == 'D':
+                pri += l
+            if alt >= len(alt_seq) / 2:
+                break
+        alt_subseq1, alt_subseq2 = alt_seq[:alt], alt_seq[alt:]
+        pri_subseq1, pri_subseq2 = pri_seq[:pri], pri_seq[pri:]
+        if items[4] == '-':
+            pri_subseq1, alt_subseq2 = _reverse(pri_subseq1), _reverse(alt_subseq2)
+        alt_fasta[items[0]] = alt_fasta[items[0]][:int(items[2])] + alt_subseq1 + pri_subseq2 + alt_fasta[items[0]][int(items[3]):]
+        pri_fasta[items[5]] = pri_fasta[items[5]][:int(items[7])] + pri_subseq1 + alt_subseq2 + pri_fasta[items[5]][int(items[8]):]
+        switch[items[0] + ':' + str(alt)] = alt
+        switch[items[5] + ':' + str(pri)] = pri
+    with open(prefix + '.pri.fasta', 'w') as fw:
+        for head, seq in pri_fasta.items():
+            fw.write('>{}\n{}\n'.format(head, seq))
+    with open(prefix + '.alt.fasta', 'w') as fw:
+        for head, seq in alt_fasta.items():
+            fw.write('>{}\n{}\n'.format(head, seq))
+    with open(prefix + '.switch', 'w') as fw:
+        for h, p in switch.items():
+            fw.write('{}\t{}\n'.format(h, p))
+
+
 def merge(args):
     chain_dual_advance(args.pafname, args.pfname, args.h1fname, args.h2fname, args.prefix)
 
@@ -2578,7 +2798,7 @@ def view(args):
     view_contig(args.var, args.ri, args.ctg)
 
 def filter(args):
-    filter_alt(args.file, args.out)
+    filter_alt(args.file, args.output)
 
 def cut(args):
     cut_contigs(args.pri, args.alt, args.cfile, args.prefix)
@@ -2733,7 +2953,7 @@ def main():
 
     parser_filter = subparser.add_parser('filter', help = 'filter nested and dumplicated alt contigs')
     parser_filter.add_argument('-f', '--file', dest = 'file', default = None, metavar = 'path', help = 'alt contigs placemnet file name')
-    parser_filter.add_argument('-o', '--output', dest = 'file', default = None, metavar = 'path', help = 'output file name')
+    parser_filter.add_argument('-o', '--output', dest = 'output', default = None, metavar = 'path', help = 'output file name')
     parser_filter.set_defaults(func = filter)
 
     parser_cut = subparser.add_parser('cut', help = 'cut primary contigs')
@@ -2875,6 +3095,28 @@ def main():
     parser_merge.add_argument('-h2', '--hap2', dest = 'h2fname', default = None, metavar = 'path', help = 'dual2 file name')
     parser_merge.add_argument('-p', '--prefix', dest = 'prefix', default = 'phasing', metavar = 'str', help = 'prefix of output files')
     parser_merge.set_defaults(func = merge)
+
+    parser_fix = subparser.add_parser('fix_phase')
+    parser_fix.add_argument('-s', '--sfname', dest = 'sfname', default = None, metavar = 'path', help = 'switch file name')
+    parser_fix.add_argument('-a', '--afname', dest = 'afname', default = None, metavar = 'path', help = 'pair file name')
+    parser_fix.add_argument('-p', '--pfname', dest = 'pfname', default = None, metavar = 'path', help = 'paf file name')
+    parser_fix.add_argument('-o', '--ofname', dest = 'ofname', default = None, metavar = 'path', help = 'output file name')
+    parser_fix.set_defaults(func = fix_switch)
+
+    parser_group = subparser.add_parser('group')
+    parser_group.add_argument('--h1', dest = 'h1fname', default = None, metavar = 'path', help = 'hap1 file name')
+    parser_group.add_argument('--h2', dest = 'h2fname', default = None, metavar = 'path', help = 'hap2 file name')
+    parser_group.add_argument('--group', dest = 'gfname', default = None, metavar = 'path', help = 'group file name')
+    parser_group.add_argument('--o1', dest = 'o1fname', default = None, metavar = 'path', help = 'output hap1 file name')
+    parser_group.add_argument('--o2', dest = 'o2fname', default = None, metavar = 'path', help = 'output hap2 file name')
+    parser_group.set_defaults(func = group)
+
+    parser_sim = subparser.add_parser('sim')
+    parser_sim.add_argument('--paf', dest = 'pfname', default = None, metavar = 'path', help = 'paf filename')
+    parser_sim.add_argument('--pri', dest = 'prifname', default = None, metavar = 'path', help = 'primary filename')
+    parser_sim.add_argument('--alt', dest = 'altfname', default = None, metavar = 'path', help = 'alternate filename')
+    parser_sim.add_argument('--prefix', dest = 'prefix', default = None, metavar = 'str', help = 'prefix of output files')
+    parser_sim.set_defaults(func = simulate_switch_error)
 
     args = parser.parse_args()
     args.func(args)

@@ -3,6 +3,7 @@
 #include "read_store.hpp"
 #include "bam_reader.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include <vector>
 #include <string>
@@ -61,10 +62,12 @@ public:
         else if(b == 4) return 2;
         else if(b == 8) return 3;
         else if(b == 15) {
-            std::cerr << "[" << GetCurTime() << "] There is a 'N' in sequence\n";
+            LOG(WARNING)("There is a 'N' in sequence\n");
+            // std::cerr << "[" << GetCurTime() << "] There is a 'N' in sequence\n";
             return 4;
         } else {
-            std::cerr << "[" << GetCurTime() << "] Unrecognized character in sequence\n";
+            LOG(WARNING)("Unrecognized character in sequence\n");
+            // std::cerr << "[" << GetCurTime() << "] Unrecognized character in sequence\n";
             return 5;
         }
     }

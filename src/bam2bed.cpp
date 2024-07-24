@@ -2,6 +2,7 @@
 #include "bam_reader.hpp"
 #include "file_io.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include <regex>
 #include <atomic>
@@ -31,8 +32,9 @@ void Bam2Bed::LoadBed() {
                 line = reader.GetNoEmptyLine();
             }
         } else {
-            std::cerr << "[" << GetCurTime() << "] Failed to open " << fname << " for reading\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Failed to open %s for reading\n", fname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Failed to open " << fname << " for reading\n";
+            // exit(EXIT_FAILURE);
         }
     }
 }
@@ -86,8 +88,9 @@ void Bam2Bed::ToBed() {
     std::string fname = opt_.prefix + ".bed";
     std::ofstream out(fname);
     if(!out.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] could not open " << fname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for writing\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] could not open " << fname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto a: bed) {
         for(auto i: a) out << i << "\t";
@@ -104,15 +107,18 @@ void Bam2Bed::Run() {
 
 int Option::Check() {
     if(b1fname.empty() || b2fname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Missing one or two bed file(s)\n";
+        LOG(WARNING)("Missing one or two bed file(s)\n");
+        // std::cerr << "[" << GetCurTime() << "] Missing one or two bed file(s)\n";
         return 1;
     }
     if(hfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Missing Hi-C mapping file\n";
+        LOG(WARNING)("Missing Hi-C mapping file\n");
+        // std::cerr << "[" << GetCurTime() << "] Missing Hi-C mapping file\n";
         return 1;
     }
     if(threads < 1) {
-        std::cerr << "[" << GetCurTime() << "] threads should be >= 1\n";
+        LOG(WARNING)("threads should be >= 1\n");
+        // std::cerr << "[" << GetCurTime() << "] threads should be >= 1\n";
         return 1;
     }
     return 0;
@@ -148,10 +154,12 @@ int ParseArgument(int argc, char **argv, Option &opt) {
         else if(c == 't') opt.threads = atoi(optarg);
         else if(c == 'h') { Usage(opt); exit(EXIT_SUCCESS); }
         else if(c == ':') {
-            std::cerr << "[" << GetCurTime() << "] ERROR missing argument in option " << optopt << "\n";
+            LOG(WARNING)("Missing argument in option %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR missing argument in option " << optopt << "\n";
             return 1;
         } else if(c == '?') {
-            std::cerr << "[" << GetCurTime() << "] ERROR unknown option " << optopt << "\n";
+            LOG(WARNING)("Unknown option %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR unknown option " << optopt << "\n";
             return 1;
         }
     }

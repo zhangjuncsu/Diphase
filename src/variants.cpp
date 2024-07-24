@@ -79,10 +79,12 @@ int ParseArgument(int argc, char **argv, Options &opt) {
         else if(c == 303) opt.acfname = optarg;
         else if(c == 304) opt.mapfname = optarg;
         else if(c == ':') {
-            std::cerr << "[" << GetCurTime() << "] ERROR missing option argument in " << optopt << "\n";
+            LOG(WARNING)("missing option argument in %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR missing option argument in " << optopt << "\n";
             return 0;
         } else if(c == '?') {
-            std::cerr << "[" << GetCurTime() << "] ERROR unknown option in " << optopt << "\n";
+            LOG(WARNING)("unknown option in %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR unknown option in " << optopt << "\n";
             return 0;
         }
     }
@@ -106,43 +108,53 @@ void Table::Confirm() {
 
 int Options::Check() const {
     if(ctgfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify the alt contig file name [-c | --contig]\n";
+        LOG(WARNING)("Please specify the alt contig file name [-c | --contig]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify the alt contig file name [-c | --contig]\n";
         return 0;
     }
     if(bamfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify the mapped file name of reads against alt contig [-a | --align]\n";
+        LOG(WARNING)("Please specify the mapped file name of reads against alt contig [-a | --align]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify the mapped file name of reads against alt contig [-a | --align]\n";
         return 0;
     }
     if(threads < 1) {
-        std::cerr << "[" << GetCurTime() << "] Threads must be >= 1 [-t | --threads]\n";
+        LOG(WARNING)("Threads must be >= 1 [-t | --threads]\n");
+        // std::cerr << "[" << GetCurTime() << "] Threads must be >= 1 [-t | --threads]\n";
         return 0;
     }
     if(min_length < 0) {
-        std::cerr << "[" << GetCurTime() << "] min_length must be >= 0 [-l | --min_length]\n";
+        LOG(WARNING)("min_length must be >= 0 [-l | --min_length]\n");
+        // std::cerr << "[" << GetCurTime() << "] min_length must be >= 0 [-l | --min_length]\n";
         return 0;
     }
     if(min_align_length < 0) {
-        std::cerr << "[" << GetCurTime() << "] min_align_length should be >= 0 [-m | --min_align_length]\n";
+        LOG(WARNING)("min_align_length should be >= 0 [-m | --min_align_length]\n");
+        // std::cerr << "[" << GetCurTime() << "] min_align_length should be >= 0 [-m | --min_align_length]\n";
         return 0;
     }
     if(overhang < 0) {
-        std::cerr << "[" << GetCurTime() << "] overhang should be >= 0 [-o | --overhang]\n";
+        LOG(WARNING)("overhang should be >= 0 [-o | --overhang]\n");
+        // std::cerr << "[" << GetCurTime() << "] overhang should be >= 0 [-o | --overhang]\n";
         return 0;
     }
     if(mapq < 0 || mapq > 60) {
-        std::cerr << "[" << GetCurTime() << "] mapq should be >= 0 && <= 60 [-q | --mapq]\n";
+        LOG(WARNING)("mapq should be >= 0 && <= 60 [-q | --mapq]\n");
+        // std::cerr << "[" << GetCurTime() << "] mapq should be >= 0 && <= 60 [-q | --mapq]\n";
         return 0;
     }
     if(align_rate < 0 || align_rate > 1) {
-        std::cerr << "[" << GetCurTime() << "] align_rate should be >= 0.0 && <= 1.0 [-f | --align_rate]\n";
+        LOG(WARNING)("align_rate should be >= 0.0 && <= 1.0 [-f | --align_rate]\n");
+        // std::cerr << "[" << GetCurTime() << "] align_rate should be >= 0.0 && <= 1.0 [-f | --align_rate]\n";
         return 0;
     }
     if(overhang_rate < 0 || overhang_rate > 1) {
-        std::cerr << "[" << GetCurTime() << "] overhang_rate should be >= 0.0 && <= 1.0 [-p | --overhang_rate]\n";
+        LOG(WARNING)("overhang_rate should be >= 0.0 && <= 1.0 [-p | --overhang_rate]\n");
+        // std::cerr << "[" << GetCurTime() << "] overhang_rate should be >= 0.0 && <= 1.0 [-p | --overhang_rate]\n";
         return 0;
     }
     if(identity < 0 || identity > 1) {
-        std::cerr << "[" << GetCurTime() << "] identity should be >= 0.0 && <= 1.0 [-i | --identity]\n";
+        LOG(WARNING)("identity should be >= 0.0 && <= 1.0 [-i | --identity]\n");
+        // std::cerr << "[" << GetCurTime() << "] identity should be >= 0.0 && <= 1.0 [-i | --identity]\n";
         return 0;
     }
     return 1;
@@ -237,7 +249,8 @@ Variants::Variants(const ReadStore &rs, const std::vector<bam1_t*> &record, std:
 
 void Variants::FindSNPInContig(Options &opt) {
     if(bam_record_.empty()) {
-        std::cerr << "[" << GetCurTime() << "] There is no record of " << ctg_name_ << " in map file\n";
+        LOG(WARNING)("There is no record of %s in map file\n", ctg_name_.c_str());
+        // std::cerr << "[" << GetCurTime() << "] There is no record of " << ctg_name_ << " in map file\n";
         return;
     }
     const DNASeq &ctg_seq = ctg_store_.GetSeq(ctg_name_);
@@ -403,8 +416,9 @@ std::unordered_map<std::string, std::vector<long>> SNP::GetVariantsWithClair3() 
             line = preader.GetNoEmptyLine();
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.pcfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading", opt_.pcfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.pcfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     // load variants in alt
     GzFileReader areader(opt_.acfname);
@@ -421,16 +435,18 @@ std::unordered_map<std::string, std::vector<long>> SNP::GetVariantsWithClair3() 
             line = areader.GetNoEmptyLine();
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.acfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading", opt_.acfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.acfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     // std::cerr << "variants[000003F_001] size " << variants["000003F_001"].size() << std::endl;
     // load paf
     std::unordered_map<std::string, std::vector<std::array<std::string, 13>>> paf;
     std::ifstream in(opt_.mapfname, std::ios::in);
     if(!in.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.mapfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for reading", opt_.mapfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.mapfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::string line;
     while(std::getline(in, line)) {

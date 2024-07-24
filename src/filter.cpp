@@ -581,13 +581,9 @@ void Filter::Run() {
         sam_write1(out, reader_.Header(), pair[0]);
         sam_write1(out, reader_.Header(), pair[1]);
     }
-    std::cerr << "1\n";
     bam_destroy1(pair[0]);
-    std::cerr << "2\n";
     bam_destroy1(pair[1]);
-    std::cerr << "3\n";
     hts_close(out);
-    std::cerr << "4\n";
 }
 
 int main(int argc, char **argv) {

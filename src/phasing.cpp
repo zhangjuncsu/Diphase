@@ -1,5 +1,6 @@
 #include "phasing.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include <getopt.h>
 
@@ -11,23 +12,28 @@
 
 int Options::Check() {
     if(cfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a contig file name [-c | --ctg]\n";
+        LOG(WARNING)("Please specify a contig file name [-c | --ctg]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a contig file name [-c | --ctg]\n";
         return 1;
     }
     if(mfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a binary matrix file name [-b | --binmat]\n";
+        LOG(WARNING)("Please specify a binary matrix file name [-b | --binmat]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a binary matrix file name [-b | --binmat]\n";
         return 1;
     }
     if(pfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a pair file name [-r | --pair]\n";
+        LOG(WARNING)("Please specify a pair file name [-r | --pair]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a pair file name [-r | --pair]\n";
         return 1;
     }
     if(threads < 1) {
-        std::cerr << "[" << GetCurTime() << "] threads must be >= 1 [-t | --threads]\n";
+        LOG(WARNING)("threads must be >= 1 [-t | --threads]\n");
+        // std::cerr << "[" << GetCurTime() << "] threads must be >= 1 [-t | --threads]\n";
         return 1;
     }
     if(iteration < 0) {
-        std::cerr << "[" << GetCurTime() << "] iteration must be >= 0 [-i | --iteration]\n";
+        LOG(WARNING)("iteration must be >= 0 [-i | --iteration]\n");
+        // std::cerr << "[" << GetCurTime() << "] iteration must be >= 0 [-i | --iteration]\n";
         return 1;
     }
     return 0;
@@ -73,10 +79,12 @@ int ParseArgument(int argc, char **argv, Options &opt) {
             USAGE(opt);
             exit(EXIT_SUCCESS);
         } else if(c == ':') {
-            std::cerr << "[" << GetCurTime() << "] ERROR missing option argument in " << optopt << "\n";
+            LOG(WARNING)("missing option argument in %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR missing option argument in " << optopt << "\n";
             return 1;
         } else if(c == '?') {
-            std::cerr << "[" << GetCurTime() << "] ERROR unknown option in " << optopt << "\n";
+            LOG(WARNING)("unknown option in %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR unknown option in " << optopt << "\n";
             return 1;
         }
     }
@@ -86,8 +94,9 @@ int ParseArgument(int argc, char **argv, Options &opt) {
 std::vector<std::array<std::string, 2>> &Phasing::LoadPair() {
     std::ifstream pin(opt_.pfname);
     if(!pin.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Could not open " << opt_.pfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for reading\n", opt_.pfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not open " << opt_.pfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::vector<std::array<std::string, 2>> pairs;
     std::string line;
@@ -173,7 +182,8 @@ void Phasing::RandomPhasing() {
                         out << rs.GetNameById(ovlp[i].second) << "\t" << rs.GetNameById(ovlp[i].first) << "\t" << ovlp[i].second << "\t" << ovlp[i].first << "\t" << ovlp[i].status << "\n";
                     }
                 }
-                std::cerr << "[" << GetCurTime() << "] Group " << g.group_name << " has been phased\n";
+                LOG(INFO)("Group %s has been phased\n", g.group_name.c_str());
+                // std::cerr << "[" << GetCurTime() << "] Group " << g.group_name << " has been phased\n";
             }
         }
     };

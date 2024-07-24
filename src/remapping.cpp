@@ -1,5 +1,6 @@
 #include "remapping.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 #include "minimap2-2.22/minimap.h"
 #include "minimap2-2.22/kseq.h"
@@ -57,10 +58,12 @@ int ParseArgument(int argc, char **argv, Options &opt) {
             USAGE(opt);
             exit(EXIT_SUCCESS);
         } else if(c == ':') {
-            std::cerr << "[" << GetCurTime() << "] ERROR missing option argument in " << optopt << "\n";
+            LOG(WARNING)("missing option argument in %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR missing option argument in " << optopt << "\n";
             return 1;
         } else if(c == '?') {
-            std::cerr << "[" << GetCurTime() << "] ERROR unknown option in " << optopt << "\n";
+            LOG(WARNING)("unknown option in %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR unknown option in " << optopt << "\n";
             return 1;
         }
     }
@@ -69,27 +72,33 @@ int ParseArgument(int argc, char **argv, Options &opt) {
 
 int Options::Check() {
     if(paffname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a mapped file [-a | --paf]\n";
+        LOG(WARNING)("Please specify a mapped file [-a | --paf]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a mapped file [-a | --paf]\n";
         return 1;
     }
     if(prifname.empty() && altfname.empty() && breakfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a primary contig file name [-P | --pri] and an alt contig file name [-A | --alt] or a breakpoint file name [-B | --breakpoing]\n";
+        LOG(WARNING)("Please specify a primary contig file name [-P | --pri] and an alt contig file name [-A | --alt] or a breakpoint file name [-B | --breakpoing]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a primary contig file name [-P | --pri] and an alt contig file name [-A | --alt] or a breakpoint file name [-B | --breakpoing]\n";
         return 1;
     }
     if(!prifname.empty() && altfname.empty() && breakfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify an alt contig file name [-A | --alt]\n";
+        LOG(WARNING)("Please specify an alt contig file name [-A | --alt]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify an alt contig file name [-A | --alt]\n";
         return 1;
     }
     if(!altfname.empty() && prifname.empty() && breakfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a primary contif file name [-P | --pri]\n";
+        LOG(WARNING)("Please specify a primary contif file name [-P | --pri]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a primary contif file name [-P | --pri]\n";
         return 1;
     }
     if(threads < 1) {
-        std::cerr << "[" << GetCurTime() << "] threads must be > 0 [-t | --threads]\n";
+        LOG(WARNING)("threads must be > 0 [-t | --threads]\n");
+        // std::cerr << "[" << GetCurTime() << "] threads must be > 0 [-t | --threads]\n";
         return 1;
     }
     if(block < 0) {
-        std::cerr << "[" << GetCurTime() << "] block must be > 0 [-b | --block]\n";
+        LOG(WARNING)("block must be > 0 [-b | --block]\n");
+        // std::cerr << "[" << GetCurTime() << "] block must be > 0 [-b | --block]\n";
         return 1;
     }
     return 0;
@@ -98,8 +107,9 @@ int Options::Check() {
 void Remapping::LoadPaf() {
     std::ifstream in(opt_.paffname, std::ios::in);
     if(!in.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Could not open " << opt_.paffname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for reading\n", opt_.paffname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not open " << opt_.paffname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::string line;
     while(std::getline(in, line)) {
@@ -115,7 +125,8 @@ void Remapping::LoadPaf() {
         }
         paf_[items[0]].emplace_back(tmp);
     }
-    std::cerr << "[" << GetCurTime() << "] Load " << paf_.size() << " alignments from file " << opt_.paffname << "\n";
+    LOG(INFO)("Load %lu alignments from file %s\n", paf_.size(), opt_.paffname.c_str());
+    // std::cerr << "[" << GetCurTime() << "] Load " << paf_.size() << " alignments from file " << opt_.paffname << "\n";
     in.close();
 }
 
@@ -125,11 +136,13 @@ void Remapping::DumpPaf() {
     for(auto k: paf_) keys.emplace_back(k.first);
     std::sort(keys.begin(), keys.end());
     std::string ofname = opt_.prefix + "." + opt_.paffname + ".new.paf";
-    std::cerr << "[" << GetCurTime() << "] Dump paf record into " << ofname << "\n";
+    LOG(INFO)("Dump paf record into %s\n", ofname.c_str());
+    // std::cerr << "[" << GetCurTime() << "] Dump paf record into " << ofname << "\n";
     std::ofstream out(ofname);
     if(!out.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Could not open " << ofname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for writing\n", ofname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not open " << ofname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto ctg: keys) {
         for(auto paf: paf_[ctg]) {
@@ -202,7 +215,8 @@ void Remapping::Remap() {
             std::ofstream ref_tmp(ref_tmp_fname);
             if(!ref_tmp.is_open()) {
                 std::lock_guard<std::mutex> lock(mtx);
-                std::cerr << "[" << GetCurTime() << "] Could not open " << ref_tmp_fname << " for writing\n";
+                LOG(WARNING)("Could not open %s for writing\n", ref_tmp_fname.c_str());
+                // std::cerr << "[" << GetCurTime() << "] Could not open " << ref_tmp_fname << " for writing\n";
                 return;
             }
             ref_tmp << ">" << item[5] << "\n";
@@ -212,7 +226,8 @@ void Remapping::Remap() {
             std::ofstream ctg_tmp(ctg_tmp_fname);
             if(!ctg_tmp.is_open()) {
                 std::lock_guard<std::mutex> lock(mtx);
-                std::cerr << "[" << GetCurTime() << "] Could not open " << ctg_tmp_fname << " for writing\n";
+                LOG(WARNING)("Could not open %s for writing\n", ctg_tmp_fname.c_str());
+                // std::cerr << "[" << GetCurTime() << "] Could not open " << ctg_tmp_fname << " for writing\n";
                 return;
             }
             ctg_tmp << ">" << item[0] << "\n";
@@ -299,7 +314,8 @@ void Remapping::Remap() {
         }
     };
     MultiThreads(opt_.threads, func);
-    std::cerr << "[" << GetCurTime() << "] After remapping " << total.load() << " contig(s) still need remapping. Total length: " << total_l.load() << "\n";
+    LOG(INFO)("After remapping %lu contig(s) still need remapping. Total length: %lu\n", total.load(), total_l.load());
+    // std::cerr << "[" << GetCurTime() << "] After remapping " << total.load() << " contig(s) still need remapping. Total length: " << total_l.load() << "\n";
 }
 
 std::unordered_map<std::string, std::vector<std::size_t>> Remapping::LoadBps() {
@@ -307,8 +323,9 @@ std::unordered_map<std::string, std::vector<std::size_t>> Remapping::LoadBps() {
     if(!opt_.breakfname.empty()) {
         std::ifstream in(opt_.breakfname);
         if(!in.is_open()) {
-            std::cerr << "[" << GetCurTime() << "] Could not open " << opt_.breakfname << " for reading\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Could not open %s for reading\n", opt_.breakfname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Could not open " << opt_.breakfname << " for reading\n";
+            // exit(EXIT_FAILURE);
         }
         std::string line;
         while(std::getline(in, line)) {
@@ -564,8 +581,9 @@ void Remapping::Cut() {
     std::string unfiltered_fname = opt_.prefix + ".unfiltered.alt2pri.txt";
     std::ofstream uout(unfiltered_fname);
     if(!uout.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Could not open " << unfiltered_fname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for writing\n", unfiltered_fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not open " << unfiltered_fname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto items: result) {
         for(auto i: items) {
@@ -574,7 +592,8 @@ void Remapping::Cut() {
         uout << "\n";
     }
     uout.close();
-    std::cerr << "[" << GetCurTime() << "] Dump unfiltered mapping infomation into " << unfiltered_fname << "\n";
+    LOG(INFO)("Dump unfiltered mapping infomation into %s\n", unfiltered_fname.c_str());
+    // std::cerr << "[" << GetCurTime() << "] Dump unfiltered mapping infomation into " << unfiltered_fname << "\n";
 
     // filter
     std::unordered_map<std::string, std::vector<std::array<std::string, 9>>> pri_unfilt;
@@ -616,8 +635,9 @@ void Remapping::Cut() {
     std::string filtered_fname = opt_.prefix + ".filtered.alt2pri.txt";
     std::ofstream fout(filtered_fname);
     if(!fout.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Could not open " << filtered_fname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for writing\n", filtered_fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not open " << filtered_fname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto items: result) {
         for(auto i: items) {
@@ -626,7 +646,8 @@ void Remapping::Cut() {
         fout << "\n";
     }
     fout.close();
-    std::cerr << "[" << GetCurTime() << "] Dump filtered mapping infomation into " << filtered_fname << "\n";
+    LOG(INFO)("Dump filtered mapping infomation into %s\n", filtered_fname.c_str());
+    // std::cerr << "[" << GetCurTime() << "] Dump filtered mapping infomation into " << filtered_fname << "\n";
 }
 
 void Remapping::Run() {

@@ -1,5 +1,6 @@
 #include "file_io.hpp"
 #include "utility.hpp"
+#include "logger.hpp"
 
 std::string StrippedString(const std::string &str) {
     std::string::size_type s = 0;
@@ -77,8 +78,9 @@ std::vector<std::string> &GetLineFromFile(const std::string &fname) {
             str = in.GetNoEmptyLine();
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open file " << fname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open file %s for reading\n", fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open file " << fname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     return lines;
 }

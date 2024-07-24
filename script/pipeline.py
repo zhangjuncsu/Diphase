@@ -9,9 +9,9 @@ import resource
 import argparse
 import subprocess
 
-from preprocessing import fsa_rename, fsa_unzip, parse_separate, make_name_mapping, map_unzip
+from preprocessing import fsa_rename, fsa_unzip, fsa_unzip1, parse_separate, make_name_mapping, map_unzip
 from preprocessing import place_alt, filter_alt, cut_contigs, phase_contigs, setLogger, create_scaffolding
-from preprocessing import shasta2unzip_and_mapping, dual_cut, phase_contigs_dual
+from preprocessing import shasta2unzip_and_mapping, dual_cut, phase_contigs_dual, fix_switch2, group2
 
 logger = logging.getLogger('phasing pipeline')
 
@@ -81,7 +81,9 @@ def pecat_to_unzip_format(pri_asm_fname, alt_asm_fname, pri_pol_fname, alt_pol_f
 
     if _test_file(dir, pri_clean_fname, alt_clean_fname): return
 
-    _file_exist(pri_asm_fname, alt_asm_fname, pri_pol_fname, alt_pol_fname)
+    if pri_asm_fname is not None or alt_asm_fname is not None:
+        _file_exist(pri_asm_fname, alt_asm_fname)
+    _file_exist(pri_pol_fname, alt_pol_fname)
 
     _check_program('awk')
 
@@ -96,17 +98,23 @@ def pecat_to_unzip_format(pri_asm_fname, alt_asm_fname, pri_pol_fname, alt_pol_f
 
     logger.info('{} Working directory {}'.format(sys._getframe().f_code.co_name, os.getcwd()))
     
-    # convert the name of polish sequences to the format of assembly
-    pri_rename_fname = prefix + '.primary.rename.fasta'
-    fsa_rename(pri_asm_fname, pri_pol_fname, pri_rename_fname)
-    alt_rename_fname = prefix + '.alt.rename.fasta'
-    fsa_rename(alt_asm_fname, alt_pol_fname, alt_rename_fname)
+    if pri_asm_fname is not None and alt_asm_fname is not None:
+        # convert the name of polish sequences to the format of assembly
+        pri_rename_fname = prefix + '.primary.rename.fasta'
+        fsa_rename(pri_asm_fname, pri_pol_fname, pri_rename_fname)
+        alt_rename_fname = prefix + '.alt.rename.fasta'
+        fsa_rename(alt_asm_fname, alt_pol_fname, alt_rename_fname)
 
-    # convert the name of PECAT to unzip
-    pri_unzip_fname = prefix + '.primary.unzip.fasta'
-    fsa_unzip(pri_rename_fname, pri_unzip_fname)
-    alt_unzip_fname = prefix + '.alt.unzip.fasta'
-    fsa_unzip(alt_rename_fname, alt_unzip_fname)
+        # convert the name of PECAT to unzip
+        pri_unzip_fname = prefix + '.primary.unzip.fasta'
+        fsa_unzip(pri_rename_fname, pri_unzip_fname)
+        alt_unzip_fname = prefix + '.alt.unzip.fasta'
+        fsa_unzip(alt_rename_fname, alt_unzip_fname)
+    else:
+        pri_unzip_fname = prefix + '.primary.unzip.fasta'
+        fsa_unzip1(pri_pol_fname, pri_unzip_fname)
+        alt_unzip_fname = prefix + '.alt.unzip.fasta'
+        fsa_unzip1(alt_pol_fname, alt_unzip_fname)
 
     # clean the name of the converted
     # pri_clean_fname = prefix + '.primary.clean.fasta'
@@ -845,7 +853,7 @@ def run_phasing(pair_fname, fai_fname, clair_pri_fname, clair_alt_fname, alt2pri
     logger.info('CPU time elapsed: {} s'.format(time.process_time()))
     logger.info('Memory usage: {:>.3f} GB\n'.format(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024 / 1024))
 
-def finalize(rfname, h2fname, cfname, mfname, sfname, prefix, dir):
+def finalize(rfname, h2fname, cfname, mfname, sfname, prefix, dir, afname, pfname):
     # rfname    phasing result filename
     # h2fname   hap2 filename
     # cfname    collapsed filename
@@ -853,14 +861,17 @@ def finalize(rfname, h2fname, cfname, mfname, sfname, prefix, dir):
     # sfname    switch filename
     # prefix    prefix of output files
     # dir       working directory
+    # afname    pair filename
+    # pfname    paf filename
 
     # hap2 and collapsed are both from primary
 
     start_time = time.time()
 
     ## final files are ${prefix}.phased0.fasta ${prefix}.phased1.fasta ${prefix}.phased0.bed ${prefix}.phased1.bed
-    hap1_fname, hap1_bfname = prefix + 'phased0.fasta', prefix + 'phased0.bed'
-    hap2_fname, hap2_bfname = prefix + 'phased1.fasta', prefix + 'phased1.bed'
+    hap1_fname, hap1_bfname = prefix + '.phased0.fasta', prefix + '.phased0.bed'
+    hap2_fname, hap2_bfname = prefix + '.phased1.fasta', prefix + '.phased1.bed'
+    fix_sfname = prefix + '.fixed.switch'
     if _test_file(dir, hap1_fname, hap2_fname, hap1_bfname, hap2_bfname): return
 
     _file_exist(rfname, h2fname, cfname, mfname)
@@ -876,7 +887,9 @@ def finalize(rfname, h2fname, cfname, mfname, sfname, prefix, dir):
 
     logger.info('{} Working directory {}'.format(sys._getframe().f_code.co_name, os.getcwd()))
 
-    phase_contigs(rfname, h2fname, cfname, mfname, sfname, prefix)
+    fix_switch2(sfname, afname, pfname, fix_sfname)
+    phase_contigs(rfname, h2fname, cfname, mfname, fix_sfname, prefix)
+    # phase_contigs(rfname, h2fname, cfname, mfname, sfname, prefix)
 
     end_time = time.time()
     logger.info('{} ends'.format(sys._getframe().f_code.co_name))
@@ -884,7 +897,54 @@ def finalize(rfname, h2fname, cfname, mfname, sfname, prefix, dir):
     logger.info('CPU time elapsed: {} s'.format(time.process_time()))
     logger.info('Memory usage: {:>.3f} GB\n'.format(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024 / 1024))
 
-def finalize_dual(rfname, h1fname, c1fname, h2fname, c2fname, mfname, sfname, prefix, dir):
+def group(bfname, b1fname, b2fname, h1fname, h2fname, dir):
+    # bfname    bam filename
+    # b1fname   bed1 filename
+    # b2fname   bed2 filename
+    # h1fname   hap1 filename
+    # h2fname   hap2 filename
+    # dir       working directory
+
+    start_time = time.time()
+    o1fname, o2fname = h1fname, h2fname
+    try:
+        subprocess.call('mv ' + h1fname + ' ' + h1fname + '.bak', shell = True)
+        subprocess.call('mv ' + h2fname + ' ' + h2fname + '.bak', shell = True)
+    except (subprocess.CalledProcessError, OSError) as e:
+        logger.error('Error running mv {}'.format(e.cmd), exc_info = 1)
+        exit(1)
+    gfname = 'group.txt'
+    if _test_file(dir, gfname): return
+    _file_exist(bfname, b1fname, b2fname, h1fname, h2fname)
+    
+    try:
+        os.chdir(dir)
+    except FileNotFoundError:
+        logger.error('Directory {} not exists!'.format(dir), exc_info = 1)
+        exit(1)
+    except PermissionError:
+        logger.error('No permission to change to directory {}'.format(dir), exc_info = 1)
+        exit(1)
+
+    logger.info('{} Working directory {}'.format(sys._getframe().f_code.co_name, os.getcwd()))
+
+    cmd_group = 'group -b ' + bfname + ' --b1 ' + b1fname + ' --b2 ' + b2fname + ' -o ' + gfname + ' -i 100'
+    logger.info(cmd_group)
+
+    try:
+        subprocess.call(cmd_group, shell = True, stderr = open('group.log', 'w'))
+    except (subprocess.CalledProcessError, OSError) as e:
+        logger.error('Error running phasing {}'.format(e.cmd), exc_info = 1)
+        exit(1)
+    group2(h1fname, h2fname, gfname, o1fname, o2fname)
+
+    end_time = time.time()
+    logger.info('{} ends'.format(sys._getframe().f_code.co_name))
+    logger.info('Wall clock time elapsed: {} s'.format(end_time - start_time))
+    logger.info('CPU time elapsed: {} s'.format(time.process_time()))
+    logger.info('Memory usage: {:>.3f} GB\n'.format(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024 / 1024))
+
+def finalize_dual(rfname, h1fname, c1fname, h2fname, c2fname, mfname, sfname, prefix, dir, afname, pfname):
     # rfname    phasing result filename
     # h1fname   hap1 bed filename
     # c1fname   collapsed1 bed filename
@@ -894,14 +954,17 @@ def finalize_dual(rfname, h1fname, c1fname, h2fname, c2fname, mfname, sfname, pr
     # sfname    switch filename
     # prefix    prefix of output files
     # dir       working directory
+    # afname    pair filename
+    # pfname    paf filename
 
     # hap2 and collapsed are both from primary
 
     start_time = time.time()
 
     ## final files are ${prefix}.phased0.fasta ${prefix}.phased1.fasta ${prefix}.phased0.bed ${prefix}.phased1.bed
-    hap1_fname, hap1_bfname = prefix + 'phased0.fasta', prefix + 'phased0.bed'
-    hap2_fname, hap2_bfname = prefix + 'phased1.fasta', prefix + 'phased1.bed'
+    hap1_fname, hap1_bfname = prefix + '.phased0.fasta', prefix + '.phased0.bed'
+    hap2_fname, hap2_bfname = prefix + '.phased1.fasta', prefix + '.phased1.bed'
+    fix_sfname = prefix + '.fixed.switch'
     if _test_file(dir, hap1_fname, hap2_fname, hap1_bfname, hap2_bfname): return
 
     _file_exist(rfname, h1fname, c1fname, h2fname, c2fname, mfname)
@@ -917,7 +980,9 @@ def finalize_dual(rfname, h1fname, c1fname, h2fname, c2fname, mfname, sfname, pr
 
     logger.info('{} Working directory {}'.format(sys._getframe().f_code.co_name, os.getcwd()))
 
-    phase_contigs_dual(rfname, h1fname, h2fname, c1fname, c2fname, mfname, sfname, prefix)
+    fix_switch2(sfname, afname, pfname, fix_sfname)
+    phase_contigs_dual(rfname, h1fname, h2fname, c1fname, c2fname, mfname, fix_sfname, prefix)
+    # phase_contigs_dual(rfname, h1fname, h2fname, c1fname, c2fname, mfname, sfname, prefix)
 
     end_time = time.time()
     logger.info('{} ends'.format(sys._getframe().f_code.co_name))
@@ -1069,13 +1134,14 @@ def run_phase(args):
 
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
-    finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir)
+    finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
 
 def run_phase_pecat(args):
     # phasing for pecat
 
-    args.pri_asm_fname = os.path.abspath(args.pri_asm_fname)
-    args.alt_asm_fname = os.path.abspath(args.alt_asm_fname)
+    if args.pri_asm_fname is not None or args.alt_asm_fname is not None:
+        args.pri_asm_fname = os.path.abspath(args.pri_asm_fname)
+        args.alt_asm_fname = os.path.abspath(args.alt_asm_fname)
     args.pri_pol_fname = os.path.abspath(args.pri_pol_fname)
     args.alt_pol_fname = os.path.abspath(args.alt_pol_fname)
     # if args.porec is True, then args.porec_fname must be not None
@@ -1230,7 +1296,7 @@ def run_phase_pecat(args):
 
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
-    finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir)
+    finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
 
 def run_phase_shasta(args):
     # phasing for shasta
@@ -1370,7 +1436,7 @@ def run_phase_shasta(args):
 
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
-    finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir)
+    finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
 
 def run_phase_dual(args):
     # phasing for dual
@@ -1497,7 +1563,7 @@ def run_phase_dual(args):
 
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
-    finalize_dual(result_fname, hap1_bfname, collapsed1_bfname, hap2_bfname, collapsed2_bfname, minced_fname, switch_fname, args.prefix, args.dir)
+    finalize_dual(result_fname, hap1_bfname, collapsed1_bfname, hap2_bfname, collapsed2_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
 
 def phasing_lachesis(pair_fname, fai_fname, dir, bed1_fname, bed2_fname, 
                      cluster_fname, hic_fname, iter, seed, prefix, dump_mat, print_mat):

@@ -1,4 +1,5 @@
 #include "phase.hpp"
+#include "logger.hpp"
 
 #include <regex>
 #include <mutex>
@@ -108,8 +109,9 @@ void Phase::GenerateVariantsWithClair3() {
             line = preader.GetNoEmptyLine();
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.pcfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.pcfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.pcfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     // load variants in alt
     GzFileReader areader(opt_.acfname);
@@ -129,15 +131,17 @@ void Phase::GenerateVariantsWithClair3() {
             line = areader.GetNoEmptyLine();
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.acfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.acfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.acfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     // load paf
     std::unordered_map<std::string, std::vector<std::array<std::string, 13>>> paf;
     std::ifstream in(opt_.bfname, std::ios::in);
     if(!in.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.bfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.bfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.bfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::string line;
     while(std::getline(in, line)) {
@@ -262,7 +266,8 @@ void Phase::GenerateVariantsWithClair3() {
     if(opt_.dump_var) {
         std::ofstream out(opt_.prefix + ".var.txt");
         if(!out.is_open()) {
-            std::cerr << "[" << GetCurTime() << "] Warning: could not open " << opt_.prefix << ".var.txt for writing\n";
+            LOG(ERROR)("Failed to open %s for writing\n", (opt_.prefix + ".var.txt").c_str());
+            // std::cerr << "[" << GetCurTime() << "] Warning: could not open " << opt_.prefix << ".var.txt for writing\n";
         }
         keys.clear();
         for(auto ctg: vars_) keys.emplace_back(ctg.first);
@@ -281,8 +286,9 @@ void Phase::GenerateVariants() {
     std::unordered_map<std::string, std::vector<std::array<std::string, 13>>> paf;
     std::ifstream in(opt_.bfname, std::ios::in);
     if(!in.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.bfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.bfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.bfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::string line;
     while(std::getline(in, line)) {
@@ -381,7 +387,8 @@ void Phase::GenerateVariants() {
     if(opt_.dump_var) {
         std::ofstream out(opt_.prefix + ".var.txt");
         if(!out.is_open()) {
-            std::cerr << "[" << GetCurTime() << "] Warning: could not open " << opt_.prefix << ".var.txt for writing\n";
+            LOG(ERROR)("Failed to open %s for writing\n", (opt_.prefix + ".var.txt").c_str());
+            // std::cerr << "[" << GetCurTime() << "] Warning: could not open " << opt_.prefix << ".var.txt for writing\n";
         }
         keys.clear();
         for(auto ctg: vars_) keys.emplace_back(ctg.first);
@@ -406,8 +413,9 @@ void Phase::LoadVariants() {
     std::string line;
     std::ifstream in(opt_.vfname);
     if(!in.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.vfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.vfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.vfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     while(std::getline(in, line)) {
         auto items = SplitString(line, '\t');
@@ -420,8 +428,9 @@ std::unordered_map<std::string, std::string> Phase::LoadBed() const {
     std::unordered_map<std::string, std::string> bed;
     std::ifstream in1(opt_.b1fname);
     if(!in1.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Couldn't open file " << opt_.b1fname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.b1fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Couldn't open file " << opt_.b1fname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::string line;
     while(std::getline(in1, line)) {
@@ -432,8 +441,9 @@ std::unordered_map<std::string, std::string> Phase::LoadBed() const {
     }
     std::ifstream in2(opt_.b2fname);
     if(!in2.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Couldn't open file " << opt_.b2fname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.b2fname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Couldn't open file " << opt_.b2fname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     while(std::getline(in2, line)) {
         auto items = SplitString(line, '\t');
@@ -470,16 +480,19 @@ void Phase::GenerateMatrixScaffold(std::unordered_map<std::string, std::string> 
         std::size_t id0 = name2id_[bed[reader_.Header()->target_name[pair[0]->core.tid]]];
         std::size_t id1 = name2id_[bed[reader_.Header()->target_name[pair[1]->core.tid]]];
         if(matrix_.AddLink(id0, id1) < 1) {
-            std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Error in AddLink\n");
+            // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+            // exit(EXIT_FAILURE);
         }
         if(matrix_.AddLink(id1, id0) < 1) {
-            std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Error in AddLink\n");
+            // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+            // exit(EXIT_FAILURE);
         }
         count += 1;
         if((count % 1000000) == 0) {
-            std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
+            LOG(INFO)("Parsed %ld read pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
         }
     }
     bam_destroy1(pair[0]);
@@ -812,8 +825,8 @@ void Phase::FixPhase(std::string &fname) {
                 consistency_[name] = 'S';
                 consistency_[names_[ctg.olps[i].second]] = 'S';
             } else if(count[0] < count[1] && count[2] < count[3]) {
-                consistency_[name] = 'C';
-                consistency_[names_[ctg.olps[i].second]] = 'C';
+                // consistency_[name] = 'C';
+                // consistency_[names_[ctg.olps[i].second]] = 'C';
                 // std::cerr << name << " " << count[0] << " " << count[1] << " " << count[2] << " " << count[3] << "\n";
             }
         }
@@ -884,8 +897,9 @@ void Phase::FilterAndGenerateMatrixPoreC() {
         std::string ofname = opt_.prefix + ".hic.filtered.bam";
         out = hts_open(ofname.c_str(), "wb");
         if(sam_hdr_write(out, reader_.Header()) != 0) {
-            std::cerr << "[" << GetCurTime() << "] Error failed to write header to " << ofname << "\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Failed to write header to %s\n", ofname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Error failed to write header to " << ofname << "\n";
+            // exit(EXIT_FAILURE);
         }
     }
     matrix_.Resize(reader_.Header()->n_targets);
@@ -911,16 +925,19 @@ void Phase::FilterAndGenerateMatrixPoreC() {
                 for(std::size_t k = j + 1; k < flag[i].size(); ++k) {
                     std::string name2 = bam_get_qname(reads[i][k]);
                     if(name1 != name2) {
-                        std::cerr << "[" << GetCurTime() << "] PoreC loaded wrong " << name1 << " != " << name2 << "\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("PoreC loaded wrong %s != %s\n", name1.c_str(), name2.c_str());
+                        // std::cerr << "[" << GetCurTime() << "] PoreC loaded wrong " << name1 << " != " << name2 << "\n";
+                        // exit(EXIT_FAILURE);
                     }
                     if(matrix_.AddLink(reads[i][flag[i][j]]->core.tid, reads[i][flag[i][k]]->core.tid) < 1) {
-                        std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("Error in AddLink\n");
+                        // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                        // exit(EXIT_FAILURE);
                     }
                     if(matrix_.AddLink(reads[i][flag[i][k]]->core.tid, reads[i][flag[i][j]]->core.tid) < 1) {
-                        std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("Error in AddLink\n");
+                        // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                        // exit(EXIT_FAILURE);
                     }
                     if(reads[i][flag[i][j]]->core.tid == reads[i][flag[i][k]]->core.tid) {
                         std::string name = reader_.Header()->target_name[reads[i][flag[i][j]]->core.tid];
@@ -937,7 +954,8 @@ void Phase::FilterAndGenerateMatrixPoreC() {
         // std::cerr << "dumpped" << std::endl;
         count += size;
         if((count % 1000000) == 0) {
-            std::cerr << "[" << GetCurTime() << "] Parsed " << count << " reads\n";
+            LOG(INFO)("Parsed %ld read pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " reads\n";
         }
 
         for(std::size_t i = 0; i < size; ++i) {
@@ -946,7 +964,8 @@ void Phase::FilterAndGenerateMatrixPoreC() {
         }
         // std::cerr << "destroyed" << std::endl;
     }
-    std::cerr << "[" << GetCurTime() << "] Total " << count << " read pairs\n";
+    if(opt_.dump_filtered) hts_close(out);
+    // std::cerr << "[" << GetCurTime() << "] Total " << count << " read pairs\n";
     if(opt_.dump_filtered) hts_close(out);
 }
 
@@ -968,16 +987,19 @@ void Phase::GenerateMatrixPoreC() {
                 for(std::size_t k = j + 1; k < reads[i].size(); ++k) {
                     std::string name2 = bam_get_qname(reads[i][k]);
                     if(name1 != name2) {
-                        std::cerr << "[" << GetCurTime() << "] PoreC loaded wrong " << name1 << " != " << name2 << "\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("PoreC loaded wrong %s != %s\n", name1.c_str(), name2.c_str());
+                        // std::cerr << "[" << GetCurTime() << "] PoreC loaded wrong " << name1 << " != " << name2 << "\n";
+                        // exit(EXIT_FAILURE);
                     }
                     if(matrix_.AddLink(reads[i][j]->core.tid, reads[i][k]->core.tid) < 1) {
-                        std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("Error in AddLink\n");
+                        // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                        // exit(EXIT_FAILURE);
                     }
                     if(matrix_.AddLink(reads[i][k]->core.tid, reads[i][j]->core.tid) < 1) {
-                        std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("Error in AddLink\n");
+                        // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                        // exit(EXIT_FAILURE);
                     }
                     if(reads[i][j]->core.tid == reads[i][k]->core.tid) {
                         std::string name = reader_.Header()->target_name[reads[i][j]->core.tid];
@@ -988,7 +1010,8 @@ void Phase::GenerateMatrixPoreC() {
         }
         count += size;
         if((count % 1000000) == 0) {
-            std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
+            LOG(INFO)("Parsed %ld read pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
         }
         for(std::size_t i = 0; i < size; ++i) {
             for(auto r: reads[i]) bam_destroy1(r);
@@ -1012,8 +1035,9 @@ void Phase::FixPhasePoreC(std::string &fname) {
                     if(read[reads_snp[j]]->core.tid == read[reads_snp[i]]->core.tid) continue;
                     std::string name2 = bam_get_qname(read[reads_snp[j]]);
                     if(name1 != name2) {
-                        std::cerr << "[" << GetCurTime() << "] PoreC loaded wrong " << name1 << " != " << name2 << "\n";
-                        exit(EXIT_FAILURE);
+                        LOG(ERROR)("PoreC loaded wrong %s != %s\n", name1.c_str(), name2.c_str());
+                        // std::cerr << "[" << GetCurTime() << "] PoreC loaded wrong " << name1 << " != " << name2 << "\n";
+                        // exit(EXIT_FAILURE);
                     }
                     std::string rname1 = reader.Header()->target_name[read[reads_snp[i]]->core.tid];
                     std::string rname2 = reader.Header()->target_name[read[reads_snp[j]]->core.tid];
@@ -1087,8 +1111,8 @@ void Phase::FixPhasePoreC(std::string &fname) {
                 consistency_[name] = 'S';
                 consistency_[names_[ctg.olps[i].second]] = 'S';
             } else if(count[0] < count[1] && count[2] < count[3]) {
-                consistency_[name] = 'C';
-                consistency_[names_[ctg.olps[i].second]] = 'C';
+                // consistency_[name] = 'C';
+                // consistency_[names_[ctg.olps[i].second]] = 'C';
                 // std::cerr << name << " " << count[0] << " " << count[1] << " " << count[2] << " " << count[3] << "\n";
             }
         }
@@ -1205,6 +1229,189 @@ int Phase::FilterHiCPairWithSNP(std::array<bam1_t*, 2> &pair) {
     return 1;
 }
 
+std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
+    std::regex pattern("(\\w+):(\\d+)-(\\d+)");
+    std::smatch result;
+
+    std::array<std::size_t, 2> ret = { (std::size_t)-1, (std::size_t)-1 };
+    for(std::size_t i = 0; i < vec.size(); ++i) {
+        if(ret[0] != (std::size_t)-1 && ret[1] != (std::size_t)-1) break;
+        if(vec[i]->core.flag & BAM_FREAD1) {
+            if(ret[0] != (std::size_t)-1) continue;
+            std::string name1 = reader_.Header()->target_name[vec[i]->core.tid];
+            long ref_pos = vec[i]->core.pos;
+            int beg = 0;
+            if(std::regex_search(name1, result, pattern)) {
+                name1 = result[1].str();
+                beg = atoi(result[2].str().c_str());
+            }
+            if(vars_.find(name1) != vars_.end()) {
+                int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
+                auto lb = std::lower_bound(vars_[name1].begin(), vars_[name1].end(), ref_pos + beg);
+                if(lb != vars_[name1].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
+                    ret[0] = i << 1 | 1;
+                }
+            }
+            if(ret[0] == -1 && vec[i]->core.qual > opt_.mapq) {
+                uint8_t *nm = bam_aux_get(vec[i], "NM");
+                if(nm == NULL || bam_aux2i(nm) < 5) {
+                    ret[0] = i << 1 | 0;
+                }
+            }
+        } else {
+            if(ret[1] != (std::size_t)-1) continue;
+            std::string name2 = reader_.Header()->target_name[vec[i]->core.tid];
+            long ref_pos = vec[i]->core.pos;
+            int beg = 0;
+            if(std::regex_search(name2, result, pattern)) {
+                name2 = result[1].str();
+                beg = atoi(result[2].str().c_str());
+            }
+            if(vars_.find(name2) != vars_.end()) {
+                int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
+                auto lb = std::lower_bound(vars_[name2].begin(), vars_[name2].end(), ref_pos + beg);
+                if(lb != vars_[name2].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
+                    ret[1] = i << 1;
+                }
+            }
+            if(ret[1] == -1 && vec[i]->core.qual > opt_.mapq) {
+                uint8_t *nm = bam_aux_get(vec[i], "NM");
+                if(nm == NULL || bam_aux2i(nm) < 5) {
+                    ret[1] = i << 1 | 0;
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+std::array<std::size_t, 2> Phase::FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec) {
+    std::array<std::size_t, 2> ret = { (std::size_t)-1, (std::size_t)-1 };
+    std::regex pattern("(\\w+):(\\d+)-(\\d+)");
+    std::smatch result;
+    for(std::size_t i = 0; i < vec.size(); ++i) {
+        if(ret[0] != (std::size_t)-1 && ret[1] != (std::size_t)-1) break;
+        if(vec[i]->core.flag & BAM_FREAD1) {
+            if(ret[0] != (std::size_t)-1) continue;
+            std::string name1 = reader_.Header()->target_name[vec[i]->core.tid];
+            long ref_pos = vec[i]->core.pos;
+            int beg = 0;
+            if(std::regex_search(name1, result, pattern)) {
+                name1 = result[1].str();
+                beg = atoi(result[2].str().c_str());
+            }
+            if(vars_.find(name1) != vars_.end()) {
+                int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
+                auto lb = std::lower_bound(vars_[name1].begin(), vars_[name1].end(), ref_pos + beg);
+                if(lb != vars_[name1].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
+                    ret[0] = i << 1 | 1;
+                }
+            }
+        } else {
+            if(ret[1] != (std::size_t)-1) continue;
+            std::string name2 = reader_.Header()->target_name[vec[i]->core.tid];
+            long ref_pos = vec[i]->core.pos;
+            int beg = 0;
+            if(std::regex_search(name2, result, pattern)) {
+                name2 = result[1].str();
+                beg = atoi(result[2].str().c_str());
+            }
+            if(vars_.find(name2) != vars_.end()) {
+                int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
+                auto lb = std::lower_bound(vars_[name2].begin(), vars_[name2].end(), ref_pos + beg);
+                if(lb != vars_[name2].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
+                    ret[1] = i << 1;
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+void Phase::FilterAndGenerateMatrixMore() {
+    reader_.Initialize(opt_.hfname);
+    for(int32_t i = 0; i < reader_.Header()->n_targets; ++i) {
+        cov_[reader_.Header()->target_name[i]].resize(reader_.Header()->target_len[i] + 1, 0);
+    }
+    htsFile *out;
+    if(opt_.dump_filtered) {
+        std::string ofname = opt_.prefix + ".hic.filtered.bam";
+        out = hts_open(ofname.c_str(), "wb");
+        if(sam_hdr_write(out, reader_.Header()) != 0) {
+            LOG(ERROR)("Failed to write header to %s\n", ofname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Error failed to write header to " << ofname << "\n";
+            // exit(EXIT_FAILURE);
+        }
+    }
+    matrix_.Resize(reader_.Header()->n_targets);
+    std::size_t SIZE = 100000;
+    // std::vector<std::vector<bam1_t*>> reads(SIZE);
+    long count = 0, filtered = 0, snp = 0;
+    while(1) {
+        std::vector<std::vector<bam1_t*>> reads(SIZE);
+        std::size_t size = reader_.LoadBatchPair(reads);
+        if(size == 0) break;
+        // std::cerr << "size " << size << "\n";
+        // int flag[size];
+        std::vector<std::array<std::size_t, 2>> flag (size);
+        std::atomic<std::size_t> index { 0 };
+        auto func = [&](std::size_t tid) {
+            for(auto cur = index.fetch_add(1); cur < size; cur = index.fetch_add(1)) {
+                flag[cur] = FilterHiCReads(reads[cur]);
+            }
+        };
+        MultiThreads(opt_.threads, func);
+        for(std::size_t i = 0; i < size; ++i) {
+            if(flag[i][0] != (std::size_t)-1 && flag[i][1] != (std::size_t)-1) {
+                // std::cerr << "flag[" << i << "][0] " << flag[i][0] << " flag[" << i << "][1] " << flag[i][1] << "\n";
+                // for(auto &r: reads[i]) {
+                //     std::cerr << "r->core.tid " << r->core.tid << " r->core.pos " << r->core.pos << " qname " << bam_get_qname(r) << "\n";
+                // }
+                std::string name1 = bam_get_qname(reads[i][flag[i][0] >> 1]);
+                std::string name2 = bam_get_qname(reads[i][flag[i][1] >> 1]);
+                if(name1 != name2) {
+                    LOG(ERROR)("HiC loaded wrong %s != %s\n", name1.c_str(), name2.c_str());
+                    // std::cerr << "[" << GetCurTime() << "] Read pair " << name1 << " != " << name2 << "\n";
+                    // exit(EXIT_FAILURE);
+                }
+                filtered += 1;
+                if(matrix_.AddLink(reads[i][flag[i][0] >> 1]->core.tid, reads[i][flag[i][1] >> 1]->core.tid) < 1) {
+                    LOG(ERROR)("Error in AddLink\n");
+                    // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                    // exit(EXIT_FAILURE);
+                }
+                if(matrix_.AddLink(reads[i][flag[i][1] >> 1]->core.tid, reads[i][flag[i][0] >> 1]->core.tid) < 1) {
+                    LOG(ERROR)("Error in AddLink\n");
+                    // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                    // exit(EXIT_FAILURE);
+                }
+                if(opt_.dump_filtered) {
+                    sam_write1(out, reader_.Header(), reads[i][flag[i][0] >> 1]);
+                    sam_write1(out, reader_.Header(), reads[i][flag[i][1] >> 1]);
+                }
+                if(flag[i][0] & 1 == 0 && flag[i][1] & 1 == 0 && reads[i][flag[i][0] >> 1]->core.tid == reads[i][flag[i][1] >> 1]->core.tid) {
+                    snp += 1;
+                    std::string ref_name = reader_.Header()->target_name[reads[i][flag[i][0] >> 1]->core.tid];
+                    IncreaseCov(ref_name, reads[i][flag[i][0] >> 1], reads[i][flag[i][1] >> 1]);
+                }
+            }
+        }
+        count += size;
+        if((count % 1000000) == 0) {
+            LOG(INFO)("Parsed %ld read pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
+        }
+        // for(auto &r: reads) {
+        //     for(auto &rr: r) bam_destroy1(rr);
+        // }
+    }
+    // std::cerr << "[" << GetCurTime() << "] Total " << count << " read pairs\n";
+    LOG(INFO)("%ld/%ld pass filter, %ld/%ld SNP\n", filtered, count, snp, count);
+    // std::cerr << "[" << GetCurTime() << "] " << filtered << "/" << count << " pass filtered " << snp << "/" << count << " SNP\n";
+
+    if(opt_.dump_filtered) hts_close(out);
+}
+
 void Phase::FilterAndGenerateMatrix() {
     reader_.Initialize(opt_.hfname);
     for(int32_t i = 0; i < reader_.Header()->n_targets; ++i) {
@@ -1215,8 +1422,9 @@ void Phase::FilterAndGenerateMatrix() {
         std::string ofname = opt_.prefix + ".hic.filtered.bam";
         out = hts_open(ofname.c_str(), "wb");
         if(sam_hdr_write(out, reader_.Header()) != 0) {
-            std::cerr << "[" << GetCurTime() << "] Error failed to write header to " << ofname << "\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Failed to write header to %s\n", ofname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Error failed to write header to " << ofname << "\n";
+            // exit(EXIT_FAILURE);
         }
     }
     matrix_.Resize(reader_.Header()->n_targets);
@@ -1249,17 +1457,20 @@ void Phase::FilterAndGenerateMatrix() {
                 std::string name1 = bam_get_qname(reads[i][0]);
                 std::string name2 = bam_get_qname(reads[i][1]);
                 if(name1 != name2) {
-                    std::cerr << "[" << GetCurTime() << "] Read pair " << name1 << " != " << name2 << "\n";
-                    exit(EXIT_FAILURE);
+                    LOG(ERROR)("HiC loaded wrong %s != %s\n", name1.c_str(), name2.c_str());
+                    // std::cerr << "[" << GetCurTime() << "] Read pair " << name1 << " != " << name2 << "\n";
+                    // exit(EXIT_FAILURE);
                 }
                 filtered += 1;
                 if(matrix_.AddLink(reads[i][0]->core.tid, reads[i][1]->core.tid) < 1) {
-                    std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-                    exit(EXIT_FAILURE);
+                    LOG(ERROR)("Error in AddLink\n");
+                    // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                    // exit(EXIT_FAILURE);
                 }
                 if(matrix_.AddLink(reads[i][1]->core.tid, reads[i][0]->core.tid) < 1) {
-                    std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-                    exit(EXIT_FAILURE);
+                    LOG(ERROR)("Error in AddLink\n");
+                    // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+                    // exit(EXIT_FAILURE);
                 }
                 if(opt_.dump_filtered) {
                     sam_write1(out, reader_.Header(), reads[i][0]);
@@ -1274,11 +1485,13 @@ void Phase::FilterAndGenerateMatrix() {
         }
         count += size;
         if((count % 1000000) == 0) {
-            std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
+            LOG(INFO)("Parsed %ld read pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
         }
     }
     // std::cerr << "[" << GetCurTime() << "] Total " << count << " read pairs\n";
-    std::cerr << "[" << GetCurTime() << "] " << filtered << "/" << count << " pass filtered " << snp << "/" << count << " SNP\n";
+    LOG(INFO)("%ld/%ld pass filter, %ld/%ld SNP\n", filtered, count, snp, count);
+    // std::cerr << "[" << GetCurTime() << "] " << filtered << "/" << count << " pass filtered " << snp << "/" << count << " SNP\n";
     for(std::size_t i = 0; i < SIZE; ++i) {
         bam_destroy1(reads[i][0]);
         bam_destroy1(reads[i][1]);
@@ -1302,16 +1515,19 @@ void Phase::GenerateMatrix() {
         std::string name1 = bam_get_qname(pair[0]);
         std::string name2 = bam_get_qname(pair[1]);
         if(name1 != name2) {
-            std::cerr << "[" << GetCurTime() << "] Read pair " << name1 << " != " << name2 << "\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("HiC loaded wrong %s != %s\n", name1.c_str(), name2.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Read pair " << name1 << " != " << name2 << "\n";
+            // exit(EXIT_FAILURE);
         }
         if(matrix_.AddLink(pair[0]->core.tid, pair[1]->core.tid) < 1) {
-            std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Error in AddLink\n");
+            // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+            // exit(EXIT_FAILURE);
         }
         if(matrix_.AddLink(pair[1]->core.tid, pair[0]->core.tid) < 1) {
-            std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Error in AddLink\n");
+            // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+            // exit(EXIT_FAILURE);
         }
         if(pair[0]->core.tid == pair[1]->core.tid) {
             std::string ref_name = reader_.Header()->target_name[pair[0]->core.tid];
@@ -1319,18 +1535,64 @@ void Phase::GenerateMatrix() {
         }
         count += 1;
         if((count % 1000000) == 0) {
-            std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
+            LOG(INFO)("Parsed %ld read pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
         }
     }
     bam_destroy1(pair[0]);
     bam_destroy1(pair[1]);
 }
 
+void Phase::GenerateMatrixWithLink() {
+    std::ifstream fin(opt_.lfname);
+    if(!fin.is_open()) {
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.lfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.lfname << " for reading\n";
+        // exit(EXIT_FAILURE);
+    }
+    long count = 0;
+    for(std::size_t i = 0; i < names_.size(); ++i) {
+        cov_[names_[i]].resize(length_[i] + 1, 0);
+    }
+    matrix_.Resize(names_.size());
+    std::string line;
+    while(std::getline(fin, line)) {
+        auto items = SplitString(line, '\t');
+        uint32_t id1 = name2id_[items[1]];
+        uint32_t id2 = name2id_[items[5]];
+        if(matrix_.AddLink(id1, id2) < 1) {
+            LOG(ERROR)("Error in AddLink\n");
+            // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+            // exit(EXIT_FAILURE);
+        }
+        if(matrix_.AddLink(id2, id1) < 1) {
+            LOG(ERROR)("Error in AddLink\n");
+            // std::cerr << "[" << GetCurTime() << "] Error in AddLink\n";
+            // exit(EXIT_FAILURE);
+        }
+        count += 1;
+        if(id1 == id2) {
+            uint32_t pos1 = std::atol(items[3].c_str());
+            uint32_t len1 = std::atol(items[4].c_str());
+            uint32_t pos2 = std::atol(items[7].c_str());
+            uint32_t len2 = std::atol(items[8].c_str());
+            if(pos1 < pos2) {
+                cov_[items[1]][pos1] += 1;
+                cov_[items[1]][pos2 + len2] -= 1;
+            } else {
+                cov_[items[1]][pos2] += 1;
+                cov_[items[1]][pos1 + len1] -= 1;
+            }
+        }
+    }
+}
+
 std::vector<std::array<std::string, 2>> Phase::LoadPair() {
     std::ifstream pin(opt_.pfname);
     if(!pin.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.pfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.pfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.pfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     std::vector<std::array<std::string, 2>> pairs;
     std::string line;
@@ -1404,8 +1666,9 @@ void Phase::ClusterCtgScaffold(std::vector<std::array<std::string, 2>> &pair) {
             line = reader.GetNoEmptyLine();
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.sfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for reading\n", opt_.sfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << opt_.sfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
 }
 
@@ -1545,6 +1808,24 @@ void Phase::LocalMaximumAll(std::vector<Overlap> &olp) {
                 else if(c2 + c3 > c1 + c4) count -= 1;
             }
         }
+        // if(count == 0) {
+        //     std::array<int, 2> tmp { 0, 0 };
+        //     for(std::size_t j = 0; j < olp.size(); ++j) {
+        //         if(j == i) continue;
+        //         int c1 = (int)matrix_.Get(olp[i].first, olp[j].first);
+        //         int c2 = (int)matrix_.Get(olp[i].first, olp[j].second);
+        //         int c3 = (int)matrix_.Get(olp[i].second, olp[j].first);
+        //         int c4 = (int)matrix_.Get(olp[i].second, olp[j].second);
+        //         if(olp[i].label == olp[j].label) {
+        //             tmp[0] += c1 + c4;
+        //             tmp[1] += c2 + c3;
+        //         } else {
+        //             tmp[0] += c2 + c3;
+        //             tmp[1] += c1 + c4;
+        //         }
+        //     }
+        //     if(tmp[0] > tmp[1]) count = 1;
+        // }
         if(count > 0) olp[i].label ^= 1;
     }
 }
@@ -1619,16 +1900,18 @@ void Phase::Phasing() {
     std::string ofname = opt_.prefix + ".result.txt";
     std::ofstream out(ofname);
     if(!out.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << ofname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for writing\n", ofname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << ofname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     std::ofstream sout;
     if(opt_.print_score) {
         std::string sfname = opt_.prefix + ".score";
         sout.open(sfname);
         if(!sout.is_open()) {
-            std::cerr << "[" << GetCurTime() << "] Error could not open " << sfname << " for writing\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Failed to open %s for writing\n", sfname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Error could not open " << sfname << " for writing\n";
+            // exit(EXIT_FAILURE);
         }
     }
 
@@ -1657,7 +1940,8 @@ void Phase::Phasing() {
             if(c.olps.empty()) continue;
             {
                 std::lock_guard<std::mutex> lock(mtx);
-                std::cerr << "[" << GetCurTime() << "] Thread " << tid << " working on group " << c.name << "\n";
+                LOG(INFO)("Thread %d working on group %s\n", tid, c.name.c_str());
+                // std::cerr << "[" << GetCurTime() << "] Thread " << tid << " working on group " << c.name << "\n";
                 if(opt_.print_mat) Print(c.olps);
             }
             if(!opt_.scaffold)
@@ -1849,19 +2133,23 @@ int Options::Check() {
     //     return 1;
     // }
     if(hfname.empty() && mfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a hic mapped file name [-i | --hic] or a matrix file name [-m | --mat]\n";
+        LOG(WARNING)("Please specify a hic mapped file name [-i | --hic] or a matrix file name [-m | --mat]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a hic mapped file name [-i | --hic] or a matrix file name [-m | --mat]\n";
         return 1;
     }
     if(pfname.empty()) {
-        std::cerr << "[" << GetCurTime() << "] Please specify a pair file name [-a | pair]\n";
+        LOG(WARNING)("Please specify a pair file name [-a | pair]\n");
+        // std::cerr << "[" << GetCurTime() << "] Please specify a pair file name [-a | pair]\n";
         return 1;
     }
     if(threads < 1) {
-        std::cerr << "[" << GetCurTime() << "] threads must be >= 1 [-t | --threads]\n";
+        LOG(WARNING)("threads must be >= 1 [-t | --threads]\n");
+        // std::cerr << "[" << GetCurTime() << "] threads must be >= 1 [-t | --threads]\n";
         return 1;
     }
     if(iteration < 1) {
-        std::cerr << "[" << GetCurTime() << "] iteration must be >= 1 [-n | --iter]\n";
+        LOG(WARNING)("iteration must be >= 1 [-n | --iter]\n");
+        // std::cerr << "[" << GetCurTime() << "] iteration must be >= 1 [-n | --iter]\n";
         return 1;
     }
     return 0;
@@ -1876,6 +2164,7 @@ void USAGE(Options &opt) {
     std::cerr << "\t\t-i | --hic        <FILE>  mapped file of Hi-C read pair against minced contig\n";
     std::cerr << "\t\t-m | --mat        <FILE>  matrix file name of Hi-C mapping\n";
     std::cerr << "\t\t-v | --var        <FILE>  variant file name\n";
+    std::cerr << "\t\t-l | --link       <FILE>  hic link file name\n";
     std::cerr << "\t\t-p | --prefix     <STR>   prefix of output files [" << opt.prefix << "]\n";
     std::cerr << "\t\t-t | --threads    <INT>   number of threads [" << opt.threads << "]\n";
     std::cerr << "\t\t-n | --iter       <INT>   number of iteration of phasing [" << opt.iteration << "]\n";
@@ -1892,7 +2181,8 @@ void USAGE(Options &opt) {
     std::cerr << "\t\t     --filtered           Hi-C mapping are filtered [" << opt.filtered << "]\n";
     std::cerr << "\t\t     --print-mat          print matrix of Hi-C mapping [" << opt.print_mat << "]\n";
     std::cerr << "\t\t     --scaffold           phasing the result of scaffolding\n";
-    std::cerr << "\t\t     --porec              phasing the result of pore-c\n";
+    std::cerr << "\t\t     --porec              phasing the result of Pore-C\n";
+    std::cerr << "\t\t     --more               more than one alignment for each Hi-C read\n";
     std::cerr << "\t\t-h | --help               display this message\n";
 }
 
@@ -1902,6 +2192,7 @@ int ParseArgument(int argc, char **argv, Options &opt) {
         {"paf",         required_argument,  NULL,   'b'}, 
         {"ctg",         required_argument,  NULL,   'c'}, 
         {"var",         required_argument,  NULL,   'v'}, 
+        {"link",        required_argument,  NULL,   'l'}, 
         {"prefix",      required_argument,  NULL,   'p'}, 
         {"hic",         optional_argument,  NULL,   'i'}, 
         {"mat",         optional_argument,  NULL,   'm'}, 
@@ -1923,9 +2214,10 @@ int ParseArgument(int argc, char **argv, Options &opt) {
         {"bed2",        required_argument,  NULL,   310}, 
         {"scaffold",    no_argument,        NULL,   311}, 
         {"porec",       no_argument,        NULL,   312}, 
+        {"more",        no_argument,        NULL,   313},
         {0, 0,  0,  0}
     };
-    const char *short_opt = "a:b:c:i:v:p:t:n:s:m:e:f:q:h";
+    const char *short_opt = "a:b:c:i:v:l:p:t:n:s:m:e:f:q:h";
     int c;
     while((c = getopt_long(argc, argv, short_opt, long_opt, NULL)) != -1) {
         if(c == 'a') opt.pfname = optarg;
@@ -1934,6 +2226,7 @@ int ParseArgument(int argc, char **argv, Options &opt) {
         else if(c == 'i') opt.hfname = optarg;
         else if(c == 'v') opt.vfname = optarg;
         else if(c == 'p') opt.prefix = optarg;
+        else if(c == 'l') opt.lfname = optarg;
         else if(c == 'm') opt.mfname = optarg;
         else if(c == 't') opt.threads = atoi(optarg);
         else if(c == 'n') opt.iteration = atoi(optarg);
@@ -1952,14 +2245,17 @@ int ParseArgument(int argc, char **argv, Options &opt) {
         else if(c == 310) opt.b2fname = optarg;
         else if(c == 311) opt.scaffold = true;
         else if(c == 312) opt.porec = true;
+        else if(c == 313) opt.more = true;
         else if(c == 'h') {
             USAGE(opt);
             exit(EXIT_SUCCESS);
         } else if(c == ':') {
-            std::cerr << "[" << GetCurTime() << "] ERROR missing argument in option " << optopt << "\n";
+            LOG(WARNING)("missing argument in option %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR missing argument in option " << optopt << "\n";
             return 1;
         } else if(c == '?') {
-            std::cerr << "[" << GetCurTime() << "] ERROR unknown option " << optopt << "\n";
+            LOG(WARNING)("unknown option %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR unknown option " << optopt << "\n";
             return 1;
         }
     }
@@ -1976,19 +2272,9 @@ void Phase::Run() {
         auto items = SplitString(line, '\t');
         name2id_[items[0]] = names_.size();
         names_.emplace_back(items[0]);
+        length_.emplace_back(std::stoull(items[1]));
     }
-    // load variants if specified, otherwise generate variants
-    // if clair3 variants are specified, generate variants with clair3, 
-    // otherwise generate variants with mapped alt contgis against primary contigs
-    if(!opt_.vfname.empty()) {
-        LoadVariants();
-    } else {
-        if(!opt_.pcfname.empty() && !opt_.acfname.empty()) {
-            GenerateVariantsWithClair3();
-        } else {
-            GenerateVariants();
-        }
-    }
+    
     // load matrix if specified, otherwise generate matrix
     // if bed files are specified, generate matrix with bed files
     // if the mapping is filtered, generate matrix with filtered mapping
@@ -1998,19 +2284,36 @@ void Phase::Run() {
     } else if(!opt_.b1fname.empty() && !opt_.b2fname.empty()) {
         auto bed = LoadBed();
         GenerateMatrixScaffold(bed);
+    } else if(!opt_.lfname.empty()) {
+        GenerateMatrixWithLink();
     } else if(!opt_.hfname.empty()) {
         if(opt_.filtered) {
             GenerateMatrix();
         } else {
+            // load variants if specified, otherwise generate variants
+            // if clair3 variants are specified, generate variants with clair3, 
+            // otherwise generate variants with mapped alt contgis against primary contigs
+            if(!opt_.vfname.empty()) {
+                LoadVariants();
+            } else {
+                if(!opt_.pcfname.empty() && !opt_.acfname.empty()) {
+                    GenerateVariantsWithClair3();
+                } else {
+                    GenerateVariants();
+                }
+            }
             if(opt_.porec) {
                 FilterAndGenerateMatrixPoreC();
+            } else if(opt_.more) {
+                FilterAndGenerateMatrixMore();
             } else {
                 FilterAndGenerateMatrix();
             }
         }
     } else {
-        std::cerr << "[" << GetCurTime() << "] Error please specify a matrix file name [-m | --mat] or a hic file name [-i | --hic]\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Please specify a matrix file name [-m | --mat] or a hic file name [-i | --hic]\n");
+        // std::cerr << "[" << GetCurTime() << "] Error please specify a matrix file name [-m | --mat] or a hic file name [-i | --hic]\n";
+        // exit(EXIT_FAILURE);
     }
     // dump matrix if specified
     if(opt_.dump_mat) {
@@ -2046,8 +2349,9 @@ void Phase::Run() {
     std::string sfname = opt_.prefix + ".switch";
     std::ofstream out(sfname);
     if(!out.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << sfname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for writing\n", sfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << sfname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto ctg: switch_error_) {
         out << ctg.first << "\t" << ctg.second << "\t" << consistency_[ctg.first] << "\n";
@@ -2107,8 +2411,9 @@ void Phase::Run1() {
     std::string sfname = opt_.prefix + ".switch";
     std::ofstream out(sfname);
     if(!out.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Failed to open " << sfname << " for writing\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Failed to open %s for writing\n", sfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Failed to open " << sfname << " for writing\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto ctg: switch_error_) {
         out << ctg.first << "\t" << ctg.second << "\t" << consistency_[ctg.first] << "\n";

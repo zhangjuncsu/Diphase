@@ -1,6 +1,7 @@
 #include "coverage.hpp"
 #include "utility.hpp"
 #include "read_store.hpp"
+#include "logger.hpp"
 
 #include "getopt.h"
 
@@ -24,11 +25,13 @@ void Usage(Options &opt) {
 
 int Options::Check() {
     // if(rfname.empty()) {
-    //     std::cerr << "[" << GetCurTime() << "] Please specify a reference file name [-r | --ref]\n";
+    //     LOG(WARNING)("Missing reference file name\n");
+    //     // std::cerr << "[" << GetCurTime() << "] Please specify a reference file name [-r | --ref]\n";
     //     return 1;
     // }
     if(threads < 1) {
-        std::cerr << "[" << GetCurTime() << "] threads should be >= 1 [-t | --threads]\n";
+        LOG(WARNING)("threads should be >= 1\n");
+        // std::cerr << "[" << GetCurTime() << "] threads should be >= 1 [-t | --threads]\n";
         return 1;
     }
     return 0;
@@ -56,10 +59,12 @@ int ParseArgument(int argc, char **argv, Options &opt) {
             Usage(opt);
             exit(EXIT_SUCCESS);
         } else if(c == ':') {
-            std::cerr << "[" << GetCurTime() << "] ERROR missing argument in option " << optopt << "\n";
+            LOG(WARNING)("Missing argument in option %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR missing argument in option " << optopt << "\n";
             return 1;
         } else if(c == '?') {
-            std::cerr << "[" << GetCurTime() << "] ERROR unknown option " << optopt << "\n";
+            LOG(WARNING)("Unknown option %c\n", optopt);
+            // std::cerr << "[" << GetCurTime() << "] ERROR unknown option " << optopt << "\n";
             return 1;
         }
     }
@@ -79,8 +84,9 @@ void Coverage::LoadVariants() {
     std::string line;
     std::ifstream in(opt_.vfname);
     if(!in.is_open()) {
-        std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.vfname << " for reading\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not open %s for reading\n", opt_.vfname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Error could not open " << opt_.vfname << " for reading\n";
+        // exit(EXIT_FAILURE);
     }
     while(std::getline(in, line)) {
         auto items = SplitString(line, '\t');
@@ -164,11 +170,13 @@ void Coverage::GetCoverage() {
             }
         }
         if(count % 1000000 == 0) {
-            std::cerr << "[" << GetCurTime() << "] Parse " << count << " pairs\n";
+            LOG(INFO)("Parse %lu pairs\n", count);
+            // std::cerr << "[" << GetCurTime() << "] Parse " << count << " pairs\n";
         }
     }
     
-    std::cerr << "[" << GetCurTime() << "] Parsed " << count << " pairs\n";
+    LOG(INFO)("Parsed %lu pairs\n", count);
+    // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " pairs\n";
     for(auto &ctg: cov_) {
         for(std::size_t i = 1; i < ctg.second.size(); ++i) {
             ctg.second[i] += ctg.second[i - 1];
@@ -235,15 +243,17 @@ void Coverage::GetCoverage() {
     }
 
     if(mkdir(opt_.ofname.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-        std::cerr << "[" << GetCurTime() << "] Could not create folder " << opt_.ofname << "\n";
-        exit(EXIT_FAILURE);
+        LOG(ERROR)("Could not create folder %s\n", opt_.ofname.c_str());
+        // std::cerr << "[" << GetCurTime() << "] Could not create folder " << opt_.ofname << "\n";
+        // exit(EXIT_FAILURE);
     }
     for(auto ctg: cov_) {
         std::string fname = opt_.ofname + "/" + ctg.first + ".cov";
         std::ofstream out(fname);
         if(!out.is_open()) {
-            std::cerr << "[" << GetCurTime() << "] Could not open " << fname << " for writing\n";
-            exit(EXIT_FAILURE);
+            LOG(ERROR)("Could not open %s for writing\n", fname.c_str());
+            // std::cerr << "[" << GetCurTime() << "] Could not open " << fname << " for writing\n";
+            // exit(EXIT_FAILURE);
         }
         for(auto c: ctg.second) {
             out << c <<"\n";
