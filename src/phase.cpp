@@ -892,7 +892,7 @@ void Phase::FilterAndGenerateMatrixPoreC() {
     for(int32_t i = 0; i < reader_.Header()->n_targets; ++i) {
         cov_[reader_.Header()->target_name[i]].resize(reader_.Header()->target_len[i] + 1, 0);
     }
-    htsFile *out;
+    htsFile *out = NULL;
     if(opt_.dump_filtered) {
         std::string ofname = opt_.prefix + ".hic.filtered.bam";
         out = hts_open(ofname.c_str(), "wb");
@@ -905,7 +905,7 @@ void Phase::FilterAndGenerateMatrixPoreC() {
     matrix_.Resize(reader_.Header()->n_targets);
     std::size_t SIZE = 100000;
     std::vector<std::vector<bam1_t*>> reads(SIZE);
-    long count = 0, filtered = 0, snp = 0;
+    long count = 0; //, filtered = 0, snp = 0;
     while(1) {
         std::size_t size = reader_.LoadBatchReads(reads);
         if(size == 0) break;
@@ -947,7 +947,10 @@ void Phase::FilterAndGenerateMatrixPoreC() {
             }
             if(opt_.dump_filtered) {
                 for(auto f: flag[i]) {
-                    sam_write1(out, reader_.Header(), reads[i][f]);
+                    int r = sam_write1(out, reader_.Header(), reads[i][f]);
+                    if(r < 0) {
+                        LOG(ERROR)("Failed to write read to filtered bam\n");
+                    }
                 }
             }
         }
@@ -966,7 +969,6 @@ void Phase::FilterAndGenerateMatrixPoreC() {
     }
     if(opt_.dump_filtered) hts_close(out);
     // std::cerr << "[" << GetCurTime() << "] Total " << count << " read pairs\n";
-    if(opt_.dump_filtered) hts_close(out);
 }
 
 void Phase::GenerateMatrixPoreC() {
@@ -979,7 +981,7 @@ void Phase::GenerateMatrixPoreC() {
     std::vector<std::vector<bam1_t*>> reads(SIZE);
     long count = 0;
     while(1) {
-        int size = reader_.LoadBatchReads(reads);
+        std::size_t size = reader_.LoadBatchReads(reads);
         if(size < 0) break;
         for(std::size_t i = 0; i < size; ++i) {
             for(std::size_t j = 0; j < reads[i].size(); ++j) {
@@ -1252,7 +1254,7 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
                     ret[0] = i << 1 | 1;
                 }
             }
-            if(ret[0] == -1 && vec[i]->core.qual > opt_.mapq) {
+            if(ret[0] == (std::size_t)-1 && vec[i]->core.qual > opt_.mapq) {
                 uint8_t *nm = bam_aux_get(vec[i], "NM");
                 if(nm == NULL || bam_aux2i(nm) < 5) {
                     ret[0] = i << 1 | 0;
@@ -1274,7 +1276,7 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
                     ret[1] = i << 1;
                 }
             }
-            if(ret[1] == -1 && vec[i]->core.qual > opt_.mapq) {
+            if(ret[1] == (std::size_t)-1 && vec[i]->core.qual > opt_.mapq) {
                 uint8_t *nm = bam_aux_get(vec[i], "NM");
                 if(nm == NULL || bam_aux2i(nm) < 5) {
                     ret[1] = i << 1 | 0;
@@ -1333,7 +1335,7 @@ void Phase::FilterAndGenerateMatrixMore() {
     for(int32_t i = 0; i < reader_.Header()->n_targets; ++i) {
         cov_[reader_.Header()->target_name[i]].resize(reader_.Header()->target_len[i] + 1, 0);
     }
-    htsFile *out;
+    htsFile *out = NULL;
     if(opt_.dump_filtered) {
         std::string ofname = opt_.prefix + ".hic.filtered.bam";
         out = hts_open(ofname.c_str(), "wb");
@@ -1386,10 +1388,13 @@ void Phase::FilterAndGenerateMatrixMore() {
                     // exit(EXIT_FAILURE);
                 }
                 if(opt_.dump_filtered) {
-                    sam_write1(out, reader_.Header(), reads[i][flag[i][0] >> 1]);
-                    sam_write1(out, reader_.Header(), reads[i][flag[i][1] >> 1]);
+                    int r1 = sam_write1(out, reader_.Header(), reads[i][flag[i][0] >> 1]);
+                    int r2 = sam_write1(out, reader_.Header(), reads[i][flag[i][1] >> 1]);
+                    if(r1 < 0 || r2 < 0) {
+                        LOG(ERROR)("Failed to write read to filtered bam\n");
+                    }
                 }
-                if(flag[i][0] & 1 == 0 && flag[i][1] & 1 == 0 && reads[i][flag[i][0] >> 1]->core.tid == reads[i][flag[i][1] >> 1]->core.tid) {
+                if((flag[i][0] & 1) == 0 && (flag[i][1] & 1) == 0 && reads[i][flag[i][0] >> 1]->core.tid == reads[i][flag[i][1] >> 1]->core.tid) {
                     snp += 1;
                     std::string ref_name = reader_.Header()->target_name[reads[i][flag[i][0] >> 1]->core.tid];
                     IncreaseCov(ref_name, reads[i][flag[i][0] >> 1], reads[i][flag[i][1] >> 1]);
@@ -1417,7 +1422,7 @@ void Phase::FilterAndGenerateMatrix() {
     for(int32_t i = 0; i < reader_.Header()->n_targets; ++i) {
         cov_[reader_.Header()->target_name[i]].resize(reader_.Header()->target_len[i] + 1, 0);
     }
-    htsFile *out;
+    htsFile *out = NULL;
     if(opt_.dump_filtered) {
         std::string ofname = opt_.prefix + ".hic.filtered.bam";
         out = hts_open(ofname.c_str(), "wb");
@@ -1473,8 +1478,11 @@ void Phase::FilterAndGenerateMatrix() {
                     // exit(EXIT_FAILURE);
                 }
                 if(opt_.dump_filtered) {
-                    sam_write1(out, reader_.Header(), reads[i][0]);
-                    sam_write1(out, reader_.Header(), reads[i][1]);
+                    int r1 = sam_write1(out, reader_.Header(), reads[i][0]);
+                    int r2 = sam_write1(out, reader_.Header(), reads[i][1]);
+                    if(r1 < 0 || r2 < 0) {
+                        LOG(ERROR)("Failed to write read to filtered bam\n");
+                    }
                 }
                 if(flag[i] == 2 && reads[i][0]->core.tid == reads[i][1]->core.tid) {
                     snp += 1;
@@ -1974,7 +1982,7 @@ void Phase::Phasing() {
                 //         c.olps[i].label = c.olps[i].label_tmp;
                 //     }
                 // }
-                int random = rand() % c.olps.size();
+                std::size_t random = rand() % c.olps.size();
                 c.olps[random].label ^= 1;
                 for(std::size_t i = 0; i < c.olps.size(); ++i) {
                     if(i == random) continue;

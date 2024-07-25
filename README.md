@@ -1,12 +1,22 @@
 # Diphase: phase diploid genome using heterozygous variations
 Diphase is a phasing tool designed for diploid genome using heterozyous variations. Diphase can only work on the primary/alternate assembly format.
 ## dependencies
-Diphase is compiled with C++11. We compiled Diphase using [gcc-9.3](https://gcc.gnu.org/gcc-9/). Python3 is needed to run the pipeline.
+Diphase is compiled with C++11. We compiled Diphase using [gcc-12.2](https://gcc.gnu.org/gcc-12/) on CentOS 7. Python3 is needed to run the pipeline.
 - [minimap2](https://github.com/lh3/minimap2/)
 - [samtools](https://github.com/samtools/samtools)
 - [BWA-MEM](https://github.com/lh3/bwa)
 - [Clair3](https://github.com/HKU-BAL/Clair3)
+### dependencies for htslib
+- zlib
+- libbz2
+- liblzma
+- libcurl
+- libcrypto
 ## Installation instructions
+### Install Diphase from bioconda (recommended)
+```
+conda create -n <env_name> diphase -c bioconda
+```
 ### Install Diphase from GitHub
 Download the latest code from GitHub:
 ```

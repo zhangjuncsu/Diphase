@@ -10,7 +10,7 @@
 
 class Seq {
 public:
-    static std::string& ReverseComplement(const std::string &seq);
+    static std::string ReverseComplement(const std::string &seq);
     static void ReverseComplementInPlace(std::string &seq);
 };
 
@@ -104,7 +104,7 @@ public:
         return str;
     }
 
-    std::vector<uint8_t> &ToUint8(int s = 0, int e = -1, bool rc = false) const {
+    std::vector<uint8_t> ToUint8(int s = 0, int e = -1, bool rc = false) const {
         assert(s >= 0 && (std::size_t)s <= length_);
         assert(e < 0 || (e >= 0 && e > s && (std::size_t)e <= length_));
         if(e < 0) e = length_;
@@ -122,13 +122,13 @@ public:
         return seq;
     }
 
-    DNASeq& ReverseComplement() const {
+    DNASeq ReverseComplement() const {
         DNASeq seq;
         seq.Reset(Seq::ReverseComplement(*(this->ToString())));
         return seq;
     }
 
-    const DNASeq& SubSeq(std::size_t pos, std::size_t size, bool rc = false) const {
+    const DNASeq SubSeq(std::size_t pos, std::size_t size, bool rc = false) const {
         assert(pos <= length_ && pos >= 0);
         if(size > length_) size = length_;
         if(pos + size > length_) size = length_ - pos;

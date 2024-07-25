@@ -40,7 +40,7 @@ inline std::string GetCurTime() {
 
 static double real_time_start;
 
-double GetCPUTime() {
+inline double GetCPUTime() {
     struct rusage rusage;
     getrusage(RUSAGE_SELF, &rusage);
     return rusage.ru_utime.tv_sec + rusage.ru_stime.tv_sec + 1e-6 * (rusage.ru_utime.tv_usec + rusage.ru_stime.tv_usec);
@@ -52,24 +52,24 @@ static inline double RealTime() {
     return tv.tv_sec + 1e-6 * tv.tv_usec;
 }
 
-void ResetRealTime() {
+inline void ResetRealTime() {
     real_time_start = RealTime();
 }
 
-double GetRealTime() {
+inline double GetRealTime() {
     return RealTime() - real_time_start;
 }
 
-long GetPeakMemory() {
+inline long GetPeakMemory() {
     struct rusage rusage;
     getrusage(RUSAGE_SELF, &rusage);
     return rusage.ru_maxrss;
 }
 
-double PeakMemoryGB() {
+inline double PeakMemoryGB() {
     return GetPeakMemory() / 1048576.0;
 }
 
-double GetCpuUsage() {
+inline double GetCpuUsage() {
     return (GetCPUTime() + 1e-9) / (GetRealTime() + 1e-9);
 }

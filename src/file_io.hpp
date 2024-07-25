@@ -131,4 +131,4 @@ private:
     FILE *out_decompress_ { nullptr };
 };
 
-std::vector<std::string> &GetLineFromFile(const std::string &fname);
+std::vector<std::string> GetLineFromFile(const std::string &fname);

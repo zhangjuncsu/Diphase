@@ -73,5 +73,5 @@ hic: hic.cpp $(OBJ)
 clean:
 	rm -rf *.o
 	rm -rf ../bin
-	# $(MAKE) clean -C ../thirdparty/htslib
-	# $(MAKE) clean -C ../thirdparty/minimap2-2.22
+	$(MAKE) clean -C ../thirdparty/htslib-1.16
+	$(MAKE) clean -C ../thirdparty/minimap2-2.22

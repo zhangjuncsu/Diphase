@@ -13,7 +13,7 @@ std::size_t FastaReader::NextBatch(std::vector<Unit>& units, std::size_t size, i
     Unit u;
     std::size_t sz = 0;
     while(sz < size && Next(u)) {
-        if(u.seq.size() < min_length) continue;
+        if(u.seq.size() < std::size_t(min_length)) continue;
         units.emplace_back(u);
         sz += u.seq.size();
     }
@@ -71,7 +71,7 @@ std::size_t FastqReader::NextBatch(std::vector<Unit> &units, std::size_t size, i
     Unit u;
     std::size_t sz = 0;
     while(sz < size && Next(u)) {
-        if(u.seq.size() < min_length) continue;
+        if(u.seq.size() < std::size_t(min_length)) continue;
         units.emplace_back(u);
         sz += u.seq.size();
     }

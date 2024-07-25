@@ -12,6 +12,7 @@ SeqReader *ReadStore::OpenFile(const std::string &fname) {
     } else if(type == "fastq" || type == "fq") {
         reader = new FastqReader(fname);
     } else {
+        reader = nullptr;
         LOG(ERROR)("Unrecognized file type %s\n", type.c_str());
         // std::cerr << "[" << GetCurTime() << "] Unrecognized file type " << type << "\n";
         // exit(EXIT_FAILURE);
@@ -51,7 +52,7 @@ void ReadStore::LoadFasta(const std::string &fname, int min_length) {
     if(reader.Valid()) {
         while(reader.Next(u)) {
             assert(!u.head.empty());
-            if(u.seq.size() < min_length) continue;
+            if(u.seq.size() < std::size_t(min_length)) continue;
             SeqReader::ID id = names_.size();
             if(names_.capacity() == names_.size()) {
                 names_.reserve(names_.capacity() * 1.5);
@@ -80,7 +81,7 @@ void ReadStore::LoadFastq(const std::string &fname, int min_length) {
     if(reader.Valid()) {
         while(reader.Next(u)) {
             assert(!u.head.empty());
-            if(u.seq.size() < min_length) continue;
+            if(u.seq.size() < std::size_t(min_length)) continue;
             SeqReader::ID id = names_.size();
             if(names_.capacity() == names_.size()) {
                 names_.reserve(names_.capacity() * 1.5);

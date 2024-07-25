@@ -68,7 +68,7 @@ std::string GzFileReader::GetNoEmptyLine() {
     }
 }
 
-std::vector<std::string> &GetLineFromFile(const std::string &fname) {
+std::vector<std::string> GetLineFromFile(const std::string &fname) {
     GzFileReader in(fname);
     std::vector<std::string> lines;
     if(in.Valid()) {

@@ -3,7 +3,7 @@
 SerialDNATable DNASeq::serial_dna_table_;
 ComplementDNATable DNASeq::complement_dna_table_;
 
-std::string& Seq::ReverseComplement(const std::string &seq) {
+std::string Seq::ReverseComplement(const std::string &seq) {
     std::string s(seq.rbegin(), seq.rend());
     std::for_each(s.begin(), s.end(), [](char &c) { c = DNASeq::Complement(c); });
     return s;
