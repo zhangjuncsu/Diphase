@@ -814,7 +814,7 @@ def run_phasing(pair_fname, fai_fname, clair_pri_fname, clair_alt_fname, alt2pri
         logger.info('iter {} should be >= 100, set to 100'.format(iter))
         iter = 100
 
-    cmd_phase = '/usr/bin/time -v phasing -a ' + pair_fname + ' -c ' + fai_fname + ' -t ' + str(threads) + ' -n ' 
+    cmd_phase = 'phasing -a ' + pair_fname + ' -c ' + fai_fname + ' -t ' + str(threads) + ' -n ' 
     cmd_phase += str(iter) + ' -s ' + str(seed) + ' -q ' + str(mapq) + ' -p ' + prefix
     if mat_fname is not None:
         cmd_phase += ' -m ' + mat_fname
@@ -1026,6 +1026,9 @@ def run_phase(args):
         if args.type is None:
             logger.error('Please specify the reference type!')
             exit(1)
+        if not os.path.exists(args.model):
+            logger.error('The model path {} not exists!'.format(args.model))
+            exit(1)
         args.rdfname = os.path.abspath(args.rdfname)
     
     if args.threads < 1:
@@ -1165,6 +1168,9 @@ def run_phase_pecat(args):
             exit(1)
         if args.type is None:
             logger.error('Please specify the type of the raw sequence!')
+            exit(1)
+        if not os.path.exists(args.model):
+            logger.error('The model path {} not exists!'.format(args.model))
             exit(1)
         args.rdfname = os.path.abspath(args.rdfname)
         args.model = os.path.abspath(args.model)
@@ -1324,6 +1330,9 @@ def run_phase_shasta(args):
         if args.type is None:
             logger.error('Please specify the reference type!')
             exit(1)
+        if not os.path.exists(args.model):
+            logger.error('The model path {} not exists!'.format(args.model))
+            exit(1)
         args.rdfname = os.path.abspath(args.rdfname)
     
     if args.threads < 1:
@@ -1465,6 +1474,9 @@ def run_phase_dual(args):
         if args.type is None:
             logger.error('Please specify the reference type!')
             exit(1)
+        if not os.path.exists(args.model):
+            logger.error('The model path {} not exists!'.format(args.model))
+            exit(1)
         args.rdfname = os.path.abspath(args.rdfname)
     
     if args.threads < 1:
@@ -1474,8 +1486,8 @@ def run_phase_dual(args):
         logger.warning('Iteration number must be greater than 10000! Set to 10000.')
         args.iter = 10000
     if args.threshold < 10000:
-        logger.info('mapq {} should be >= 10000, set to 10000'.format(args.mapq))
-        args.mapq = 10000
+        logger.info('mapq {} should be >= 10000, set to 10000'.format(args.threshold))
+        args.threshold = 10000
     
     log_arguments(args)
 
@@ -1731,7 +1743,7 @@ def main():
                               metavar = 'int', help = 'number of threads to use')
     parser_pecat.add_argument('-q', '--mapq', dest = 'mapq', type = int, default = 1,
                               metavar = 'int', help = 'mapq cutoff for hic mapping')
-    parser_pecat.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'], 
+    parser_pecat.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'], default = 'ont', 
                               metavar = 'str', help = 'type of the raw sequence')
     parser_pecat.add_argument('--iter', dest = 'iter', type = int, default = 10000, 
                               metavar = 'int', help = 'number of iteration to phase')
@@ -1782,7 +1794,7 @@ def main():
                               metavar = 'int', help = 'number of threads to use')
     parser_phase.add_argument('-q', '--mapq', dest = 'mapq', type = int, default = 1,
                               metavar = 'int', help = 'mapq cutoff for hic mapping')
-    parser_phase.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'], 
+    parser_phase.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'],  default = 'ont', 
                               metavar = 'str', help = 'type of the raw sequence')
     parser_phase.add_argument('--iter', dest = 'iter', type = int, default = 10000, 
                               metavar = 'int', help = 'number of iteration to phase')
@@ -1832,7 +1844,7 @@ def main():
                                 metavar = 'int', help = 'number of threads to use')
     parser_shasta.add_argument('-q', '--mapq', dest = 'mapq', type = int, default = 1,
                                 metavar = 'int', help = 'mapq cutoff for hic mapping')
-    parser_shasta.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'],
+    parser_shasta.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'],  default = 'ont', 
                                 metavar = 'str', help = 'type of the raw sequence')
     parser_shasta.add_argument('--iter', dest = 'iter', type = int, default = 10000,
                                 metavar = 'int', help = 'number of iteration to phase')
@@ -1884,8 +1896,8 @@ def main():
     parser_dual.add_argument('-q', '--mapq', dest = 'mapq', type = int, default = 1,
                                 metavar = 'int', help = 'mapq cutoff for hic mapping')
     parser_dual.add_argument('-s', '--threshold', dest = 'threshold', type = int, default = 15000,
-                                metavar = 'int', help = 'mapq cutoff for hic mapping')
-    parser_dual.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'],
+                                metavar = 'int', help = 'threshold for match')
+    parser_dual.add_argument('--type', dest = 'type', choices = ['clr', 'hifi', 'ont'],  default = 'ont',
                                 metavar = 'str', help = 'type of the raw sequence')
     parser_dual.add_argument('--iter', dest = 'iter', type = int, default = 10000,
                                 metavar = 'int', help = 'number of iteration to phase')
