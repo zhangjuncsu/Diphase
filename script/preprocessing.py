@@ -1698,12 +1698,14 @@ def fix_switch2(sfname, afname, pfname, ofname):
         items = line.strip().split()
         if items[1] not in switch: continue
         pair[items[1]] = items[0]
+        pair[items[0]] = items[1]
     pattern = re.compile(r'(\d+)([MIDNSHP=X])')
     fixed = {}
     for line in open(pfname, 'r'):
         items = line.strip().split()
         if len(items) < 11: continue
         if items[0] not in name_mapping: continue
+        if name_mapping[items[0]] in fixed: continue
         alt = int(items[2])
         pri = int(items[7])
         if items[4] == '-':
@@ -1723,16 +1725,21 @@ def fix_switch2(sfname, afname, pfname, ofname):
                     break
                 alt += l
                 pri += l
-            elif op == 'D' or op == 'N':
+            elif op == 'I' or op == 'S':
                 if alt < switch[name_mapping[items[0]]][0] and alt + l > switch[name_mapping[items[0]]][0]:
                     fixed[name_mapping[items[0]]] = alt + l
                     fixed[pair[name_mapping[items[0]]]] = pri - offset
                     break
                 alt += l
-            elif op == 'I' or op == 'S':
+            elif op == 'D' or op == 'N':
                 pri += l
+    def _offset(a, b):
+        if a / b > 1.1 or a / b < 0.9:
+            return True
     with open(ofname, 'w') as fw:
         for h, p in fixed.items():
+            if _offset(p, switch[h][0]) or _offset(fixed[pair[h]], switch[pair[h]][0]):
+                continue
             fw.write('{}\t{}\t{}\n'.format(h, p, switch[h][1]))
 
 def fix_switch(args):

@@ -15,7 +15,27 @@ Diphase is compiled with C++11. We compiled Diphase using [gcc-12.2](https://gcc
 ## Installation instructions
 ### Install Diphase from bioconda (recommended)
 ```
-conda create -n <env_name> diphase -c bioconda
+conda create -n <env_name> -c bioconda -c conda-forge diphase clair3 minimap2=2.22
+```
+model can be found in /path/to/conda/envs/<env_name>/bin/models/
+### Docker pre-built image
+A pre-built docker image is available at [DockerHub](https://hub.docker.com/repository/docker/jun67/diphase/general)
+```
+docker run -it \
+-v ${INPUT_DIR}:/mnt \
+-v ${OUTPUT_DIR}:/mnt/${OUTPUT_DIR} \
+jun67/diphase:latest \
+pipeline.py \
+--pri ${INPUT_DIR}/primary.fasta \      ## primary assembly file
+--alt ${INPUT_DIR}/alternate.fasta \    ## alternate assembly file
+--rdfname ${INPUT_DIR}/reads.fastq.gz \ ## raw reads file
+--hic1 ${INPUT_DIR}/hic_R1.fastq.gz \   ## Hi-C reads 1 file
+--hic2 ${INPUT_DIR}/hic_R2.fastq.gz \   ## Hi-C reads 2 file
+--model /opt/models/ont \               ## model path used to call SNP by Clair3
+--type ont \                            ## sequencing technology [ont]
+-d ${OUTPUT_DIR} \                      ## directory to save the output files
+-t ${THREADS} \                         ## maximal threads to be used
+--dump_filtered                         ## save filtered Hi-C mapping
 ```
 ### Install Diphase from GitHub
 Download the latest code from GitHub:
@@ -26,10 +46,17 @@ cd ..
 export PATH=`pwd`/bin:$PATH
 ```
 Diphase can be found in ./bin and the python scripts can be found in ./script.
+## Testing
+Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). Then run the demo to test whether diphase has been successfully installed
+```
+tar -zxf data.tar.gz
+python /path/to/Diphase/script/pipeline.py --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
+```
 ## Usage
 ```
-python /pathto/pipeline.py --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads>
+python /path/to/Diphase/script/pipeline.py --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads> --dump_filtered
 ```
+The phased assemblies are named ```\${prefix}.hap1.fasta``` and ```\${prefix}.hap2.fasta```.
 ### Options
 | | | |
 | :--- | :--- | :---|
@@ -46,5 +73,6 @@ python /pathto/pipeline.py --pri <primary assembly> --alt <alternate assembly> -
 -t | \<INT> | number of threads default 1 |
 -q | \<INT> | mapping quality to filter Hi-C mapping default 1 |
 -p | \<STR> | prefix of the output files default "phasing" |
+--dump_filtered | | dump filtered Hi-C mapping
 
 Diphase can only work on the primary/alternate asembly format, now. We are implementing the code to make Diphase work on the other assembly format, such as dual assembly format.

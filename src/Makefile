@@ -9,7 +9,7 @@ INCLUDE=-I../thirdparty/htslib-1.16 -I../thirdparty -Isrc
 OBJ = matrix.o sequence.o file_io.o seq_io.o read_store.o logger.o
 
 # all: bin SNPCall remap phase filter phasing merge cov bam2bed group # graph hic
-all: bin phasing
+all: bin phasing group
 
 bin:
 	mkdir -p ../bin

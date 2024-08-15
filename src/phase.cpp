@@ -5,7 +5,7 @@
 #include <mutex>
 #include <atomic>
 #include <numeric>
-
+#include "sys/stat.h"
 #include "getopt.h"
 
 // void Phase::GenerateVariants() {
@@ -527,74 +527,165 @@ void Phase::IncreaseCov(std::string &name, bam1_t *a, bam1_t *b) {
     }
 }
 
+std::size_t FindLowestValley(std::vector<std::size_t> &cov) {
+    const double b = 0.01;
+    const int w = 10;
+    int n = int(2 / b) + 1;
+    std::vector<int> hist(n, 0);
+    for(std::size_t i = 0; i < cov.size(); ++i) {
+        int x = int((cov[i] + 1) / b);
+        hist[x] += 1;
+    }
+    std::vector<int> smoothed(hist.size() - w + 1, 0);
+    smoothed[0] = std::accumulate(hist.begin(), hist.begin() + w, 0);
+    for(std::size_t i = 1; i + w < hist.size(); ++i) {
+        smoothed[i] = smoothed[i - 1] - hist[i - 1] + hist[i - 1 + w];
+    }
+    std::vector<std::array<int, 3>> peaks;
+    std::vector<int> troughs;
+    int state = 0;
+    int ps = 0;
+    for(std::size_t i = 0; i < smoothed.size(); ++i) {
+        if(state == 0) {
+            if(smoothed[i] >= 6) {
+                ps = i;
+                state = 1;
+            }
+        } else if(state == 1) {
+            if(smoothed[i] < std::max<int>(smoothed[ps] * 0.8, 6)) {
+                int end = i - 1;
+                int start = ps;
+                for(int ii = ps; ii > 0; --ii) {
+                    if(smoothed[ii] >= smoothed[ps] * 0.8 && smoothed[ii] >= 6) {
+                        start = ii;
+                    } else {
+                        break;
+                    }
+                }
+                peaks.push_back({ start, end, ps });
+                state = 2;
+                ps = i;
+            } else {
+                if(smoothed[i] > smoothed[ps]) {
+                    ps = i;
+                }
+            }
+        } else if(state == 2) {
+            if(smoothed[i] * 0.8 > smoothed[ps]) {
+                state = 0;
+            } else {
+                if(smoothed[i] < smoothed[ps]) {
+                    ps = i;
+                }
+            }
+        }
+    }
+    if(peaks.size() >= 2) {
+        const auto &last0 = peaks.back();
+        const auto &last1 = peaks[peaks.size() - 2];
+        return (last1[1] + w - 1 + last0[0]) / 2 * b - 1;
+    } else if(peaks.size() == 1) {
+        const auto &last = peaks.back();
+        return (last[0] + last[1] + w - 1) / 2 * b - 1;
+    } else {
+        return 0;
+    }
+}
+
 std::unordered_map<std::string, std::size_t> Phase::DetectSwitchError() {
     std::unordered_map<std::string, std::size_t> positions;
     std::unordered_map<std::string, std::array<size_t, 2>> regions;
     std::unordered_map<std::string, std::vector<std::array<int, 2>>> stats;
     std::regex pattern("(\\w+):(\\d+)-(\\d+)");
     std::smatch result;
+    if(mkdir("cov", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
+        LOG(ERROR)("Could not create folder %s\n", "cov");
+    }
     for(auto ctg: cov_) {
-        auto cov = ctg.second;
+        auto& cov = ctg.second;
         for(std::size_t i = 1; i < cov.size(); ++i) {
             cov[i] = cov[i] + cov[i - 1];
         }
+        for(std::size_t i = 1; i < cov.size(); ++i) {
+            if((cov[i - 1] > 100 && cov[i] > 5 * cov[i - 1]) || cov[i] > 5000) {
+                cov[i] = cov[i - 1];
+            }
+        }
+        std::string fname = "cov/" + ctg.first + ".cov";
+        std::ofstream out(fname);
+        if(!out.is_open()) {
+        }
+        for(auto c: cov) {
+            out << c <<"\n";
+        }
+        out.close();
+        double THRES = 0.60;
+        double THRES2 = 0.8;
         if(*std::max_element(cov.begin(), cov.end()) < 30) continue;
         double average = std::accumulate(cov.begin(), cov.end(), 0.0) / cov.size();
-        std::vector<std::size_t> pos;
-        for(int div = 5; div <= 15; ++div) {
-            double cutoff = average / div;
-            std::vector<int> delta;
-            for(std::size_t i = 0; i < cov.size(); ++i) {
-                if(cov[i] < cutoff) {
-                    delta.emplace_back(10);
-                } else {
-                    delta.emplace_back(-10);
-                }
-            }
-            std::size_t sz = delta.size();
-            int max_so_far = -100000, max_ending_here = 0;
-            std::size_t start = sz / 1000, end = sz / 1000, s = sz / 1000;
-            for(std::size_t i = sz / 1000; i < 99 * sz / 100; ++i) {
-                max_ending_here += delta.at(i);
-                if(max_so_far < max_ending_here) {
-                    max_so_far = max_ending_here;
-                    start = s;
-                    end = i;
-                }
-                if(max_ending_here < 0) {
-                    max_ending_here = 0;
-                    s = i + 1;
-                }
-            }
-            if(start >= sz / 1000 + 50000 && end <= 99 * sz / 100 - 50000) {
-                pos.emplace_back((start + end) / 2);
-            }
+        auto left = std::find_if(cov.begin(), cov.end(), [&](std::size_t x){ return x >= std::size_t(average * THRES2); });
+        auto right = std::find_if(cov.rbegin(), cov.rend(), [&](std::size_t x){ return x >= std::size_t(average * THRES2); }).base();
+        auto peak = std::minmax_element(left, right);
+        if(*peak.first < std::size_t((1 - THRES) * average) && *peak.second > std::size_t((1 + THRES) * average)) {
+            std::size_t st = peak.first - cov.begin();
+            std::size_t en = std::find_if_not(peak.first, right, [&](std::size_t x){ return x != *peak.first; }) - cov.begin();
+            positions[ctg.first] = (st + en) / 2;
         }
-        if(pos.size() > 0) {
-            std::size_t consensus_pos = std::accumulate(pos.begin(), pos.end(), 0) / pos.size();
-            positions[ctg.first] = consensus_pos;
-            std::size_t st, en;
-            for(st = consensus_pos; st >= 0; --st) {
-                if(cov[st] > cov[consensus_pos] + 10) break;
-            }
-            for(en = consensus_pos; en < cov.size(); ++en) {
-                if(cov[en] > cov[consensus_pos] + 10) break;
-            }
-            std::string name = ctg.first;
-            int offset = 0;
-            if(std::regex_search(ctg.first, result, pattern)) {
-                name = result[1].str();
-                offset = atoi(result[2].str().c_str());
-            }
-            if(vars_.find(name) != vars_.end()) {
-                auto left = std::lower_bound(vars_[name].begin(), vars_[name].end(), st + offset);
-                auto right = std::upper_bound(vars_[name].begin(), vars_[name].end(), en + offset);
-                if(right - left > 1) {
-                    regions[ctg.first] = std::array<std::size_t, 2> { st, en };
-                    stats[ctg.first].resize(right - left);
-                }
-            }
-        }
+        // std::vector<std::size_t> pos;
+        // for(int div = 5; div <= 15; ++div) {
+        //     double cutoff = average / div;
+        //     std::vector<int> delta;
+        //     for(std::size_t i = 0; i < cov.size(); ++i) {
+        //         if(cov[i] < cutoff) {
+        //             delta.emplace_back(10);
+        //         } else {
+        //             delta.emplace_back(-10);
+        //         }
+        //     }
+        //     std::size_t sz = delta.size();
+        //     int max_so_far = -100000, max_ending_here = 0;
+        //     std::size_t start = sz / 1000, end = sz / 1000, s = sz / 1000;
+        //     for(std::size_t i = sz / 1000; i < 99 * sz / 100; ++i) {
+        //         max_ending_here += delta.at(i);
+        //         if(max_so_far < max_ending_here) {
+        //             max_so_far = max_ending_here;
+        //             start = s;
+        //             end = i;
+        //         }
+        //         if(max_ending_here < 0) {
+        //             max_ending_here = 0;
+        //             s = i + 1;
+        //         }
+        //     }
+        //     if(start >= sz / 1000 + 50000 && end <= 99 * sz / 100 - 50000) {
+        //         pos.emplace_back((start + end) / 2);
+        //     }
+        // }
+        // if(pos.size() > 0) {
+        //     std::size_t consensus_pos = std::accumulate(pos.begin(), pos.end(), 0) / pos.size();
+        //     positions[ctg.first] = consensus_pos;
+        //     std::size_t st, en;
+        //     for(st = consensus_pos; st >= 0; --st) {
+        //         if(cov[st] > cov[consensus_pos] + 10) break;
+        //     }
+        //     for(en = consensus_pos; en < cov.size(); ++en) {
+        //         if(cov[en] > cov[consensus_pos] + 10) break;
+        //     }
+        //     std::string name = ctg.first;
+        //     int offset = 0;
+        //     if(std::regex_search(ctg.first, result, pattern)) {
+        //         name = result[1].str();
+        //         offset = atoi(result[2].str().c_str());
+        //     }
+        //     if(vars_.find(name) != vars_.end()) {
+        //         auto left = std::lower_bound(vars_[name].begin(), vars_[name].end(), st + offset);
+        //         auto right = std::upper_bound(vars_[name].begin(), vars_[name].end(), en + offset);
+        //         if(right - left > 1) {
+        //             regions[ctg.first] = std::array<std::size_t, 2> { st, en };
+        //             stats[ctg.first].resize(right - left);
+        //         }
+        //     }
+        // }
     }
     return positions;
 /*   
@@ -794,7 +885,6 @@ void Phase::FixPhase(std::string &fname) {
         for(std::size_t i = 0; i < ctg.olps.size(); ++i) {
             std::string name = names_[ctg.olps[i].first];
             if(switch_error_.find(name) == switch_error_.end()) continue;
-            Print(ctg.olps);
             std::array<int, 4> count = { 0, 0, 0, 0 };
             for(std::size_t j = 0; j < ctg.olps.size(); ++j) {
                 if(j == i) continue;
@@ -1082,7 +1172,6 @@ void Phase::FixPhasePoreC(std::string &fname) {
         for(std::size_t i = 0; i < ctg.olps.size(); ++i) {
             std::string name = names_[ctg.olps[i].first];
             if(switch_error_.find(name) == switch_error_.end()) continue;
-            Print(ctg.olps);
             std::array<int, 4> count = { 0, 0, 0, 0 };
             for(std::size_t j = 0; j < ctg.olps.size(); ++j) {
                 if(j == i) continue;
@@ -2362,6 +2451,7 @@ void Phase::Run() {
         // exit(EXIT_FAILURE);
     }
     for(auto ctg: switch_error_) {
+        if(consistency_[ctg.first] != 'F' && consistency_[ctg.first] != 'S') continue;
         out << ctg.first << "\t" << ctg.second << "\t" << consistency_[ctg.first] << "\n";
     }
     out.close();

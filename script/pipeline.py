@@ -897,25 +897,29 @@ def finalize(rfname, h2fname, cfname, mfname, sfname, prefix, dir, afname, pfnam
     logger.info('CPU time elapsed: {} s'.format(time.process_time()))
     logger.info('Memory usage: {:>.3f} GB\n'.format(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024 / 1024))
 
-def group(bfname, b1fname, b2fname, h1fname, h2fname, dir):
+def group(bfname, b1fname, b2fname, h1fname, h2fname, pfname, prefix, dir):
     # bfname    bam filename
     # b1fname   bed1 filename
     # b2fname   bed2 filename
     # h1fname   hap1 filename
     # h2fname   hap2 filename
+    # pfname    pair filename
+    # prefix    prefix of output files
     # dir       working directory
 
     start_time = time.time()
-    o1fname, o2fname = h1fname, h2fname
-    try:
-        subprocess.call('mv ' + h1fname + ' ' + h1fname + '.bak', shell = True)
-        subprocess.call('mv ' + h2fname + ' ' + h2fname + '.bak', shell = True)
-    except (subprocess.CalledProcessError, OSError) as e:
-        logger.error('Error running mv {}'.format(e.cmd), exc_info = 1)
-        exit(1)
+    # o1fname, o2fname = h1fname, h2fname
+    o1fname, o2fname = prefix + '.hap1.fasta', prefix + '.hap2.fasta'
     gfname = 'group.txt'
-    if _test_file(dir, gfname): return
+    if _test_file(dir, gfname, o1fname, o2fname): return
     _file_exist(bfname, b1fname, b2fname, h1fname, h2fname)
+
+    # try:
+    #     subprocess.call('mv ' + h1fname + ' ' + h1fname + '.bak', shell = True)
+    #     subprocess.call('mv ' + h2fname + ' ' + h2fname + '.bak', shell = True)
+    # except (subprocess.CalledProcessError, OSError) as e:
+    #     logger.error('Error running mv {}'.format(e.cmd), exc_info = 1)
+    #     exit(1)
     
     try:
         os.chdir(dir)
@@ -928,7 +932,7 @@ def group(bfname, b1fname, b2fname, h1fname, h2fname, dir):
 
     logger.info('{} Working directory {}'.format(sys._getframe().f_code.co_name, os.getcwd()))
 
-    cmd_group = 'group -b ' + bfname + ' --b1 ' + b1fname + ' --b2 ' + b2fname + ' -o ' + gfname + ' -i 100'
+    cmd_group = 'group -b ' + bfname + ' --b1 ' + b1fname + ' --b2 ' + b2fname + ' -p ' + pfname + ' -o ' + gfname + ' -i 10000'
     logger.info(cmd_group)
 
     try:
@@ -1138,6 +1142,12 @@ def run_phase(args):
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
     finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
+    filter_hic_mapping = os.path.join(dir_phase, args.prefix + '.hic.filtered.bam')
+    phase1_bfname = os.path.join(args.dir, args.prefix + '.phased0.bed')
+    phase2_bfname = os.path.join(args.dir, args.prefix + '.phased1.bed')
+    phase1_fname = os.path.join(args.dir, args.prefix + '.phased0.fasta')
+    phase2_fname = os.path.join(args.dir, args.prefix + '.phased1.fasta')
+    group(filter_hic_mapping, phase1_bfname, phase2_bfname, phase1_fname, phase2_fname, pair_fname, args.prefix, args.dir)
 
 def run_phase_pecat(args):
     # phasing for pecat
@@ -1303,6 +1313,12 @@ def run_phase_pecat(args):
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
     finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
+    filter_hic_mapping = os.path.join(dir_phase, args.prefix + '.hic.filtered.bam')
+    phase1_bfname = os.path.join(args.dir, args.prefix + '.phased0.bed')
+    phase2_bfname = os.path.join(args.dir, args.prefix + '.phased1.bed')
+    phase1_fname = os.path.join(args.dir, args.prefix + '.phased0.fasta')
+    phase2_fname = os.path.join(args.dir, args.prefix + '.phased1.fasta')
+    group(filter_hic_mapping, phase1_bfname, phase2_bfname, phase1_fname, phase2_fname, pair_fname, args.prefix, args.dir)
 
 def run_phase_shasta(args):
     # phasing for shasta
@@ -1446,6 +1462,12 @@ def run_phase_shasta(args):
     result_fname = os.path.join(dir_phase, args.prefix + '.result.txt')
     switch_fname = os.path.join(dir_phase, args.prefix + '.switch')
     finalize(result_fname, hap2_bfname, collapsed_bfname, minced_fname, switch_fname, args.prefix, args.dir, pair_fname, filtered_paf_file)
+    filter_hic_mapping = os.path.join(dir_phase, args.prefix + '.hic.filtered.bam')
+    phase1_bfname = os.path.join(args.dir, args.prefix + '.phased0.bed')
+    phase2_bfname = os.path.join(args.dir, args.prefix + '.phased1.bed')
+    phase1_fname = os.path.join(args.dir, args.prefix + '.phased0.fasta')
+    phase2_fname = os.path.join(args.dir, args.prefix + '.phased1.fasta')
+    group(filter_hic_mapping, phase1_bfname, phase2_bfname, phase1_fname, phase2_fname, pair_fname, args.prefix, args.dir)
 
 def run_phase_dual(args):
     # phasing for dual
