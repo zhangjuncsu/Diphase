@@ -121,7 +121,8 @@ std::size_t BamReader::LoadBatchReads(std::vector<std::vector<bam1_t*>> &vec) {
     return index;
 }
 
-std::size_t BamReader::LoadBatchPair(std::vector<std::vector<bam1_t*>> &vp) {
+// std::size_t BamReader::LoadBatchPair(std::vector<std::vector<bam1_t*>> &vp) {
+std::size_t BamReader::LoadBatchPair(std::vector<BamVecs> &vp) {
     std::size_t index = 0;
     if(eof_) return 0;
     while(1) {

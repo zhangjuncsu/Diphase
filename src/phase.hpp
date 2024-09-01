@@ -66,8 +66,10 @@ public:
 
     int FilterHiCPair(std::array<bam1_t*, 2> &pair);
     int FilterHiCPairWithSNP(std::array<bam1_t*, 2> &pair);
-    std::array<std::size_t, 2> FilterHiCReads(std::vector<bam1_t*> &vec);
-    std::array<std::size_t, 2> FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec);
+    // std::array<std::size_t, 2> FilterHiCReads(std::vector<bam1_t*> &vec);
+    // std::array<std::size_t, 2> FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec);
+    std::array<std::size_t, 2> FilterHiCReads(BamVecs &vec);
+    std::array<std::size_t, 2> FilterHiCReadsWithSNP(BamVecs &vec);
     void GenerateMatrix();
     void FilterAndGenerateMatrix();
     void FilterAndGenerateMatrixMore();

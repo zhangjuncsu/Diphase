@@ -598,9 +598,9 @@ std::unordered_map<std::string, std::size_t> Phase::DetectSwitchError() {
     std::unordered_map<std::string, std::vector<std::array<int, 2>>> stats;
     std::regex pattern("(\\w+):(\\d+)-(\\d+)");
     std::smatch result;
-    if(mkdir("cov", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-        LOG(ERROR)("Could not create folder %s\n", "cov");
-    }
+    // if(mkdir("cov", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
+    //     LOG(ERROR)("Could not create folder %s\n", "cov");
+    // }
     for(auto ctg: cov_) {
         auto& cov = ctg.second;
         for(std::size_t i = 1; i < cov.size(); ++i) {
@@ -611,14 +611,14 @@ std::unordered_map<std::string, std::size_t> Phase::DetectSwitchError() {
                 cov[i] = cov[i - 1];
             }
         }
-        std::string fname = "cov/" + ctg.first + ".cov";
-        std::ofstream out(fname);
-        if(!out.is_open()) {
-        }
-        for(auto c: cov) {
-            out << c <<"\n";
-        }
-        out.close();
+        // std::string fname = "cov/" + ctg.first + ".cov";
+        // std::ofstream out(fname);
+        // if(!out.is_open()) {
+        // }
+        // for(auto c: cov) {
+        //     out << c <<"\n";
+        // }
+        // out.close();
         double THRES = 0.60;
         double THRES2 = 0.8;
         if(*std::max_element(cov.begin(), cov.end()) < 30) continue;
@@ -1320,11 +1320,13 @@ int Phase::FilterHiCPairWithSNP(std::array<bam1_t*, 2> &pair) {
     return 1;
 }
 
-std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
+// std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
+std::array<std::size_t, 2> Phase::FilterHiCReads(BamVecs &vec) {
     std::regex pattern("(\\w+):(\\d+)-(\\d+)");
     std::smatch result;
 
     std::array<std::size_t, 2> ret = { (std::size_t)-1, (std::size_t)-1 };
+    // int aln_len1 = -1, aln_len2 = -1;
     for(std::size_t i = 0; i < vec.size(); ++i) {
         if(ret[0] != (std::size_t)-1 && ret[1] != (std::size_t)-1) break;
         if(vec[i]->core.flag & BAM_FREAD1) {
@@ -1340,12 +1342,15 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
                 int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
                 auto lb = std::lower_bound(vars_[name1].begin(), vars_[name1].end(), ref_pos + beg);
                 if(lb != vars_[name1].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
+                    // if(len < aln_len1) continue;
+                    // aln_len1 = len;
                     ret[0] = i << 1 | 1;
                 }
             }
             if(ret[0] == (std::size_t)-1 && vec[i]->core.qual > opt_.mapq) {
-                uint8_t *nm = bam_aux_get(vec[i], "NM");
+                uint8_t *nm = bam_aux_get(vec[i].get(), "NM");
                 if(nm == NULL || bam_aux2i(nm) < 5) {
+                    // if(aln_len1 != -1) continue;
                     ret[0] = i << 1 | 0;
                 }
             }
@@ -1362,12 +1367,15 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
                 int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
                 auto lb = std::lower_bound(vars_[name2].begin(), vars_[name2].end(), ref_pos + beg);
                 if(lb != vars_[name2].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
+                    // if(len < aln_len2) continue;
+                    // aln_len2 = len;
                     ret[1] = i << 1;
                 }
             }
             if(ret[1] == (std::size_t)-1 && vec[i]->core.qual > opt_.mapq) {
-                uint8_t *nm = bam_aux_get(vec[i], "NM");
+                uint8_t *nm = bam_aux_get(vec[i].get(), "NM");
                 if(nm == NULL || bam_aux2i(nm) < 5) {
+                    // if(aln_len2 != -1) continue;
                     ret[1] = i << 1 | 0;
                 }
             }
@@ -1376,7 +1384,8 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
     return ret;
 }
 
-std::array<std::size_t, 2> Phase::FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec) {
+// std::array<std::size_t, 2> Phase::FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec) {
+std::array<std::size_t, 2> Phase::FilterHiCReadsWithSNP(BamVecs &vec) {
     std::array<std::size_t, 2> ret = { (std::size_t)-1, (std::size_t)-1 };
     std::regex pattern("(\\w+):(\\d+)-(\\d+)");
     std::smatch result;
@@ -1439,7 +1448,8 @@ void Phase::FilterAndGenerateMatrixMore() {
     // std::vector<std::vector<bam1_t*>> reads(SIZE);
     long count = 0, filtered = 0, snp = 0;
     while(1) {
-        std::vector<std::vector<bam1_t*>> reads(SIZE);
+        std::vector<BamVecs> reads(SIZE);
+        // std::vector<std::vector<bam1_t*>> reads(SIZE);
         std::size_t size = reader_.LoadBatchPair(reads);
         if(size == 0) break;
         // std::cerr << "size " << size << "\n";
@@ -1477,8 +1487,8 @@ void Phase::FilterAndGenerateMatrixMore() {
                     // exit(EXIT_FAILURE);
                 }
                 if(opt_.dump_filtered) {
-                    int r1 = sam_write1(out, reader_.Header(), reads[i][flag[i][0] >> 1]);
-                    int r2 = sam_write1(out, reader_.Header(), reads[i][flag[i][1] >> 1]);
+                    int r1 = sam_write1(out, reader_.Header(), reads[i][flag[i][0] >> 1].get());
+                    int r2 = sam_write1(out, reader_.Header(), reads[i][flag[i][1] >> 1].get());
                     if(r1 < 0 || r2 < 0) {
                         LOG(ERROR)("Failed to write read to filtered bam\n");
                     }
@@ -1486,7 +1496,7 @@ void Phase::FilterAndGenerateMatrixMore() {
                 if((flag[i][0] & 1) == 0 && (flag[i][1] & 1) == 0 && reads[i][flag[i][0] >> 1]->core.tid == reads[i][flag[i][1] >> 1]->core.tid) {
                     snp += 1;
                     std::string ref_name = reader_.Header()->target_name[reads[i][flag[i][0] >> 1]->core.tid];
-                    IncreaseCov(ref_name, reads[i][flag[i][0] >> 1], reads[i][flag[i][1] >> 1]);
+                    IncreaseCov(ref_name, reads[i][flag[i][0] >> 1].get(), reads[i][flag[i][1] >> 1].get());
                 }
             }
         }

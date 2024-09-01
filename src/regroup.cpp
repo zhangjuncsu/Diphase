@@ -184,47 +184,47 @@ void Regroup::GenerateMatrix() {
 }
 
 void Regroup::GenerateMatrixMore() {
-    matrix_.Resize(index_.size(), index_.size());
-    BamReader reader;
-    reader.Initialize(opt_.bfname);
+    // matrix_.Resize(index_.size(), index_.size());
+    // BamReader reader;
+    // reader.Initialize(opt_.bfname);
 
-    int mapq = 1;
-    long count = 0;
-    std::size_t SIZE = 1000;
-    while(1) {
-        std::vector<std::vector<bam1_t*>> reads(SIZE);
-        std::size_t size = reader.LoadBatchPair(reads);
-        if(size == 0) break;
-        for(std::size_t k = 0; k < size; ++k) {
-            for(std::size_t i = 0; i < reads[k].size(); ++i) {
-                if(reads[k][i]->core.qual < mapq) continue;
-                std::string namei = bam_get_qname(reads[k][i]);
-                std::string refi = reader.Header()->target_name[reads[k][i]->core.tid];
-                for(std::size_t j = 0; j < reads[k].size(); ++j) {
-                    if(reads[k][j]->core.qual < mapq) continue;
-                    if(i == j) continue;
-                    std::string namej = bam_get_qname(reads[k][j]);
-                    std::string refj = reader.Header()->target_name[reads[k][j]->core.tid];
-                    if(namei != namej) {
-                        LOG(ERROR)("Read names are not the same: %s, %s", namei.c_str(), namej.c_str());
-                    }
-                    std::size_t indexi = -1, indexj = -1;
-                    indexi = index_[mapped_[refi]];
-                    indexj = index_[mapped_[refj]];
-                    if(matrix_.AddLink(indexi, indexj) < 0) {
-                        LOG(ERROR)("Failed to add link: %s, %s", refi.c_str(), refj.c_str());
-                    }
-                    if(matrix_.AddLink(indexj, indexi) < 0) {
-                        LOG(ERROR)("Failed to add link: %s, %s", refj.c_str(), refi.c_str());
-                    }
-                }
-            }
-            count += 1;
-            if(count % 1000000 == 0) {
-                LOG(INFO)("Processed %ld reads\n", count);
-            }
-        }
-    }
+    // int mapq = 1;
+    // long count = 0;
+    // std::size_t SIZE = 1000;
+    // while(1) {
+    //     std::vector<std::vector<bam1_t*>> reads(SIZE);
+    //     std::size_t size = reader.LoadBatchPair(reads);
+    //     if(size == 0) break;
+    //     for(std::size_t k = 0; k < size; ++k) {
+    //         for(std::size_t i = 0; i < reads[k].size(); ++i) {
+    //             if(reads[k][i]->core.qual < mapq) continue;
+    //             std::string namei = bam_get_qname(reads[k][i]);
+    //             std::string refi = reader.Header()->target_name[reads[k][i]->core.tid];
+    //             for(std::size_t j = 0; j < reads[k].size(); ++j) {
+    //                 if(reads[k][j]->core.qual < mapq) continue;
+    //                 if(i == j) continue;
+    //                 std::string namej = bam_get_qname(reads[k][j]);
+    //                 std::string refj = reader.Header()->target_name[reads[k][j]->core.tid];
+    //                 if(namei != namej) {
+    //                     LOG(ERROR)("Read names are not the same: %s, %s", namei.c_str(), namej.c_str());
+    //                 }
+    //                 std::size_t indexi = -1, indexj = -1;
+    //                 indexi = index_[mapped_[refi]];
+    //                 indexj = index_[mapped_[refj]];
+    //                 if(matrix_.AddLink(indexi, indexj) < 0) {
+    //                     LOG(ERROR)("Failed to add link: %s, %s", refi.c_str(), refj.c_str());
+    //                 }
+    //                 if(matrix_.AddLink(indexj, indexi) < 0) {
+    //                     LOG(ERROR)("Failed to add link: %s, %s", refj.c_str(), refi.c_str());
+    //                 }
+    //             }
+    //         }
+    //         count += 1;
+    //         if(count % 1000000 == 0) {
+    //             LOG(INFO)("Processed %ld reads\n", count);
+    //         }
+    //     }
+    // }
 }
 
 void Regroup::LoadGroup() {
