@@ -616,12 +616,13 @@ std::unordered_map<std::string, std::size_t> Phase::DetectSwitchError() {
         // if(!out.is_open()) {
         // }
         // for(auto c: cov) {
-        //     out << c <<"\n";
+        //     out << c << "\n";
         // }
         // out.close();
         double THRES = 0.60;
         double THRES2 = 0.8;
-        if(*std::max_element(cov.begin(), cov.end()) < 30) continue;
+        // if(*std::max_element(cov.begin(), cov.end()) < 30) continue;
+        if(std::accumulate(cov.begin(), cov.end(), 0) / cov.size() < 35) continue;
         double average = std::accumulate(cov.begin(), cov.end(), 0.0) / cov.size();
         auto left = std::find_if(cov.begin(), cov.end(), [&](std::size_t x){ return x >= std::size_t(average * THRES2); });
         auto right = std::find_if(cov.rbegin(), cov.rend(), [&](std::size_t x){ return x >= std::size_t(average * THRES2); }).base();
@@ -1320,17 +1321,19 @@ int Phase::FilterHiCPairWithSNP(std::array<bam1_t*, 2> &pair) {
     return 1;
 }
 
-// std::array<std::size_t, 2> Phase::FilterHiCReads(std::vector<bam1_t*> &vec) {
 std::array<std::size_t, 2> Phase::FilterHiCReads(BamVecs &vec) {
     std::regex pattern("(\\w+):(\\d+)-(\\d+)");
     std::smatch result;
 
     std::array<std::size_t, 2> ret = { (std::size_t)-1, (std::size_t)-1 };
-    // int aln_len1 = -1, aln_len2 = -1;
+    int aln_score1 = -1, aln_score2 = -1;
     for(std::size_t i = 0; i < vec.size(); ++i) {
-        if(ret[0] != (std::size_t)-1 && ret[1] != (std::size_t)-1) break;
+        // if(ret[0] != (std::size_t)-1 && ret[1] != (std::size_t)-1) break;
         if(vec[i]->core.flag & BAM_FREAD1) {
-            if(ret[0] != (std::size_t)-1) continue;
+            // if(ret[0] != (std::size_t)-1) continue;
+            if(ret[0] != (std::size_t)-1) {
+                if(!(vec[ret[0] >> 1]->core.flag & BAM_FSECONDARY) && !(vec[ret[0] >> 1]->core.flag & BAM_FSUPPLEMENTARY)) continue;
+            }
             std::string name1 = reader_.Header()->target_name[vec[i]->core.tid];
             long ref_pos = vec[i]->core.pos;
             int beg = 0;
@@ -1338,24 +1341,30 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(BamVecs &vec) {
                 name1 = result[1].str();
                 beg = atoi(result[2].str().c_str());
             }
+            uint8_t* as_tag = bam_aux_get(vec[i].get(), "AS");
+            int as1 = as_tag == NULL ? 0 : bam_aux2i(as_tag);
             if(vars_.find(name1) != vars_.end()) {
                 int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
                 auto lb = std::lower_bound(vars_[name1].begin(), vars_[name1].end(), ref_pos + beg);
                 if(lb != vars_[name1].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
-                    // if(len < aln_len1) continue;
-                    // aln_len1 = len;
+                    if(aln_score1 >= as1) continue;
+                    aln_score1 = as1;
                     ret[0] = i << 1 | 1;
                 }
             }
             if(ret[0] == (std::size_t)-1 && vec[i]->core.qual > opt_.mapq) {
                 uint8_t *nm = bam_aux_get(vec[i].get(), "NM");
                 if(nm == NULL || bam_aux2i(nm) < 5) {
-                    // if(aln_len1 != -1) continue;
+                    if(aln_score1 >= as1) continue;
+                    aln_score1 = as1;
                     ret[0] = i << 1 | 0;
                 }
             }
-        } else {
-            if(ret[1] != (std::size_t)-1) continue;
+        } else if(vec[i]->core.flag & BAM_FREAD2) {
+            // if(ret[1] != (std::size_t)-1) continue;
+            if(ret[1] != (std::size_t)-1) {
+                if(!(vec[ret[1] >> 1]->core.flag & BAM_FSECONDARY) && !(vec[ret[1] >> 1]->core.flag & BAM_FSUPPLEMENTARY)) break;
+            }
             std::string name2 = reader_.Header()->target_name[vec[i]->core.tid];
             long ref_pos = vec[i]->core.pos;
             int beg = 0;
@@ -1363,19 +1372,22 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(BamVecs &vec) {
                 name2 = result[1].str();
                 beg = atoi(result[2].str().c_str());
             }
+            uint8_t* as_tag = bam_aux_get(vec[i].get(), "AS");
+            int as2 = as_tag == NULL ? 0 : bam_aux2i(as_tag);
             if(vars_.find(name2) != vars_.end()) {
                 int len = bam_cigar2rlen(vec[i]->core.n_cigar, bam_get_cigar(vec[i]));
                 auto lb = std::lower_bound(vars_[name2].begin(), vars_[name2].end(), ref_pos + beg);
                 if(lb != vars_[name2].end() && *lb > ref_pos + beg && *lb < ref_pos + beg + len) {
-                    // if(len < aln_len2) continue;
-                    // aln_len2 = len;
+                    if(aln_score2 >= as2) continue;
+                    aln_score2 = as2;
                     ret[1] = i << 1;
                 }
             }
             if(ret[1] == (std::size_t)-1 && vec[i]->core.qual > opt_.mapq) {
                 uint8_t *nm = bam_aux_get(vec[i].get(), "NM");
                 if(nm == NULL || bam_aux2i(nm) < 5) {
-                    // if(aln_len2 != -1) continue;
+                    if(aln_score2 >= as2) continue;
+                    aln_score2 = as2;
                     ret[1] = i << 1 | 0;
                 }
             }
@@ -1384,7 +1396,6 @@ std::array<std::size_t, 2> Phase::FilterHiCReads(BamVecs &vec) {
     return ret;
 }
 
-// std::array<std::size_t, 2> Phase::FilterHiCReadsWithSNP(std::vector<bam1_t*> &vec) {
 std::array<std::size_t, 2> Phase::FilterHiCReadsWithSNP(BamVecs &vec) {
     std::array<std::size_t, 2> ret = { (std::size_t)-1, (std::size_t)-1 };
     std::regex pattern("(\\w+):(\\d+)-(\\d+)");
@@ -1505,9 +1516,6 @@ void Phase::FilterAndGenerateMatrixMore() {
             LOG(INFO)("Parsed %ld read pairs\n", count);
             // std::cerr << "[" << GetCurTime() << "] Parsed " << count << " read pairs\n";
         }
-        // for(auto &r: reads) {
-        //     for(auto &rr: r) bam_destroy1(rr);
-        // }
     }
     // std::cerr << "[" << GetCurTime() << "] Total " << count << " read pairs\n";
     LOG(INFO)("%ld/%ld pass filter, %ld/%ld SNP\n", filtered, count, snp, count);
