@@ -26,6 +26,7 @@ docker run -it \
 -v ${OUTPUT_DIR}:/mnt/${OUTPUT_DIR} \
 jun67/diphase:latest \
 pipeline.py \
+phase \
 --pri ${INPUT_DIR}/primary.fasta \      ## primary assembly file
 --alt ${INPUT_DIR}/alternate.fasta \    ## alternate assembly file
 --rdfname ${INPUT_DIR}/reads.fastq.gz \ ## raw reads file
@@ -47,14 +48,14 @@ export PATH=`pwd`/bin:$PATH
 ```
 Diphase can be found in ./bin and the python scripts can be found in ./script.
 ## Testing
-Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). Then run the demo to test whether diphase has been successfully installed
+Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). Extract the data for input. Then run the demo to test whether diphase has been successfully installed
 ```
 tar -zxf data.tar.gz
 python /path/to/Diphase/script/pipeline.py --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
 ```
 ## Usage
 ```
-python /path/to/Diphase/script/pipeline.py --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads> --dump_filtered
+python /path/to/Diphase/script/pipeline.py phase --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads> --dump_filtered
 ```
 The phased assemblies are named ```\${prefix}.hap1.fasta``` and ```\${prefix}.hap2.fasta```.
 ### Options
