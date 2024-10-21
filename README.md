@@ -6,6 +6,8 @@ Diphase is compiled with C++11. We compiled Diphase using [gcc-12.2](https://gcc
 - [samtools](https://github.com/samtools/samtools)
 - [BWA-MEM](https://github.com/lh3/bwa)
 - [Clair3](https://github.com/HKU-BAL/Clair3)
+
+Note: script ```run_clair3.sh``` should be included in PATH.
 ### dependencies for htslib
 - zlib
 - libbz2
@@ -48,7 +50,7 @@ export PATH=`pwd`/bin:$PATH
 ```
 Diphase can be found in ./bin and the python scripts can be found in ./script.
 ## Testing
-Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). Extract the data for input. Then run the demo to test whether diphase has been successfully installed
+Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). The example data are used for input. Then run the demo to test whether diphase has been successfully installed. [Here](https://drive.google.com/file/d/1KiybiVVkIzygzCfZL9bL69yGEiyISVKG/view?usp=drive_link) is the output for the example data.
 ```
 tar -zxf data.tar.gz
 python /path/to/Diphase/script/pipeline.py phase --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
