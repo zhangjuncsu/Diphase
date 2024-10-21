@@ -51,7 +51,7 @@ Diphase can be found in ./bin and the python scripts can be found in ./script.
 Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). Extract the data for input. Then run the demo to test whether diphase has been successfully installed
 ```
 tar -zxf data.tar.gz
-python /path/to/Diphase/script/pipeline.py --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
+python /path/to/Diphase/script/pipeline.py phase --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
 ```
 ## Usage
 ```
