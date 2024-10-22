@@ -1,7 +1,7 @@
-# Diphase: phase diploid genome using heterozygous variations
+# Diphase: phasing Nanopore genome assembly by integrating heterozygous variations and Hi-C data
 Diphase is a phasing tool designed for diploid genome using heterozyous variations. Diphase can only work on the primary/alternate assembly format.
 ## dependencies
-Diphase is compiled with C++11. We compiled Diphase using [gcc-12.2](https://gcc.gnu.org/gcc-12/) on CentOS 7. Python3 is needed to run the pipeline.
+Diphase is compiled with C++11. We compiled Diphase using [gcc-12.2](https://gcc.gnu.org/gcc-12/) on CentOS 7. Python3 is needed to run the pipeline. We recommend users install the dependencies using conda.
 - [minimap2](https://github.com/lh3/minimap2/)
 - [samtools](https://github.com/samtools/samtools)
 - [BWA-MEM](https://github.com/lh3/bwa)
@@ -50,16 +50,24 @@ export PATH=`pwd`/bin:$PATH
 ```
 Diphase can be found in ./bin and the python scripts can be found in ./script.
 ## Testing
-Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). The example data are used for input. Then run the demo to test whether diphase has been successfully installed. [Here](https://drive.google.com/file/d/1KiybiVVkIzygzCfZL9bL69yGEiyISVKG/view?usp=drive_link) is the output for the example data.
+Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). The example data are used for input. Then run the demo to test whether diphase has been successfully installed.
 ```
 tar -zxf data.tar.gz
 python /path/to/Diphase/script/pipeline.py phase --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
 ```
+[Here](https://drive.google.com/file/d/1KiybiVVkIzygzCfZL9bL69yGEiyISVKG/view?usp=drive_link) is the output for the example data. The phased results can be found in ```diphase/phase/phasing.result.txt```. The final phased assemblies ```phasing.hap1.fasta``` and ```phasing.hap2.fasta``` can be found in the directory ```diphase```.
 ## Usage
+### prepare your datasets
+Prepare the primary contigs file, alternate contigs file, raw reads file, and Hi-C reads file. All the files can be gzip compressed. Then run
 ```
 python /path/to/Diphase/script/pipeline.py phase --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads> --dump_filtered
 ```
-The phased assemblies are named ```\${prefix}.hap1.fasta``` and ```\${prefix}.hap2.fasta```.
+
+- SNPs called by Clair3 are in the files ```<out directory>/clair3/clair3pri/merge_output.vcf.gz``` and ```<out directory>/clair3/clair3alt/merge_output.vcf.gz```.
+- Filtered Hi-C alignments are in the file ```<out directory>/phase/phasing.hic.filtered.bam```.
+- Detected switches are in the file ```<out directory>/phasing.fixed.switch```.
+- The phasing results are in the file ```<out directory>/phase/phasing.result.txt```.
+- The final phased assemblied are in the files ```<out directory>/${prefix}.hap1.fasta``` and ```<out directory>/${prefix}.hap2.fasta```.
 ### Options
 | | | |
 | :--- | :--- | :---|
