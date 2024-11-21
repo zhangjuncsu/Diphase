@@ -53,14 +53,14 @@ Diphase can be found in ./bin and the python scripts can be found in ./script.
 Download the testing data from [Google Drive](https://drive.google.com/file/d/1rvvWr4t4ZjbuJPP6PrLujh6FHxRmKE5e/view?usp=drive_link). The example data are used for input. Then run the demo to test whether diphase has been successfully installed.
 ```
 tar -zxf data.tar.gz
-python /path/to/Diphase/script/pipeline.py phase --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
+/path/to/Diphase/script/pipeline.py phase --pri /path/to/data/primary.fasta --alt /path/to/data/alternate.fasta --rdfname /path/to/data/subread.fastq.gz --hic1 /path/to/data/HiC1.fastq.gz --hic2 /path/to/data/HiC2.fastq.gz --model <clair3 model path> --type ont -d <out directory> -t <threads> --dump_filtered
 ```
 [Here](https://drive.google.com/file/d/1KiybiVVkIzygzCfZL9bL69yGEiyISVKG/view?usp=drive_link) is the output for the example data. The phased results can be found in ```diphase/phase/phasing.result.txt```. The final phased assemblies ```phasing.hap1.fasta``` and ```phasing.hap2.fasta``` can be found in the directory ```diphase```.
 ## Usage
 ### prepare your datasets
 Prepare the primary contigs file, alternate contigs file, raw reads file, and Hi-C reads file. All the files can be gzip compressed. Then run
 ```
-python /path/to/Diphase/script/pipeline.py phase --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads> --dump_filtered
+/path/to/Diphase/script/pipeline.py phase --pri <primary assembly> --alt <alternate assembly> --rdfname <reads> --hic1 <Hi-C mate-pair 1> --hic2 <Hi-C mate-pair 2> --model <clair3 model path> --type [clr | hifi | ont] -d <out directory> -t <threads> --dump_filtered
 ```
 
 - SNPs called by Clair3 are in the files ```<out directory>/clair3/clair3pri/merge_output.vcf.gz``` and ```<out directory>/clair3/clair3alt/merge_output.vcf.gz```.
