@@ -87,3 +87,6 @@ Prepare the primary contigs file, alternate contigs file, raw reads file, and Hi
 --dump_filtered | | dump filtered Hi-C mapping
 
 Diphase can only work on the primary/alternate asembly format, now. We are implementing the code to make Diphase work on the other assembly format, such as dual assembly format.
+
+## Citation
+Jun Zhang, Fan Nie, Feng Luo, Jianxin Wang, Phasing nanopore genome assembly by integrating heterozygous variations and Hi-C data, Bioinformatics, Volume 40, Issue 12, December 2024, btae712, https://doi.org/10.1093/bioinformatics/btae712
